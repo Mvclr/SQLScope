@@ -1,7 +1,7 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import pg from 'pg';
 import { afterAll, beforeAll } from 'vitest';
-import { pgExecutor } from '../src/adapters/pg.js';
+import { pgSession } from '../src/adapters/pg.js';
 import { describeEngineContract } from './contract.js';
 
 let container: StartedPostgreSqlContainer;
@@ -30,7 +30,7 @@ describeEngineContract('PostgreSQL', async () => {
   });
   await client.connect();
   return {
-    db: pgExecutor(client),
+    db: pgSession(client),
     dispose: async () => {
       await client.end();
       await admin.query(`drop database ${name}`);

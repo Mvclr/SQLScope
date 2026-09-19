@@ -14,6 +14,11 @@ RUN pnpm --filter "@sqlscope/api..." run build
 # Self-contained production tree: only runtime dependencies, workspace packages included.
 RUN pnpm --filter @sqlscope/api deploy --prod /out
 
+# One-shot: applies Prisma migrations to the control database (compose service "migrate").
+FROM build AS migrate
+WORKDIR /repo/apps/api
+CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
+
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app

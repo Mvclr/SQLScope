@@ -1,6 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll } from 'vitest';
-import { pgliteExecutor } from '../src/adapters/pglite.js';
+import { pgliteSession } from '../src/adapters/pglite.js';
 import { describeEngineContract } from './contract.js';
 
 // Booting PGlite compiles its WebAssembly module, which takes seconds on a busy machine.
@@ -18,5 +18,5 @@ afterAll(async () => {
 
 describeEngineContract('PGlite', async () => {
   const pglite = await template.clone();
-  return { db: pgliteExecutor(pglite), dispose: () => pglite.close() };
+  return { db: pgliteSession(pglite), dispose: () => pglite.close() };
 });

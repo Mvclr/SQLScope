@@ -11,3 +11,9 @@ next-env.d.ts
 
 # Claude Code per-machine settings
 .claude/settings.local.json
+
+# Prisma client, generated at build time
+apps/api/src/generated
+
+# Monaco, copied from node_modules at build time
+apps/web/public/monaco

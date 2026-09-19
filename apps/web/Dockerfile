@@ -7,6 +7,9 @@ RUN corepack enable
 WORKDIR /repo
 
 FROM base AS build
+# Rewrites are compiled into the build, so the API address must be known now.
+ARG API_INTERNAL_URL=http://api:4000
+ENV API_INTERNAL_URL=${API_INTERNAL_URL}
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter "@sqlscope/web..."

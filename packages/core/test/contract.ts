@@ -3,12 +3,14 @@ import {
   diffSnapshots,
   introspect,
   type ForeignKeyConstraint,
+  asDatabaseError,
   type SqlExecutor,
+  type SqlSession,
   type TableSnapshot,
 } from '../src/index.js';
 
 export interface TestDatabase {
-  readonly db: SqlExecutor;
+  readonly db: SqlSession;
   dispose(): Promise<void>;
 }
 
@@ -204,6 +206,156 @@ export function describeEngineContract(
       expect((await introspect(db)).tables).toEqual([]);
     });
   });
+  describe(`execution contract — ${engine}`, () => {
+    let current: TestDatabase | undefined;
+    const limits = { maxRows: 1000, maxBytes: 1_000_000 };
+
+    const fresh = async (...statements: string[]) => {
+      current = await createDatabase();
+      // Text output of timestamptz depends on the session time zone.
+      await run(current.db, `set timezone = 'UTC'`, ...statements);
+      return current.db;
+    };
+
+    afterEach(async () => {
+      await current?.dispose();
+      current = undefined;
+    });
+
+    it('returns every value as PostgreSQL text output', async () => {
+      const db = await fresh();
+
+      const output = await db.execute(
+        `select 42::int as i, 1.50::numeric(10, 2) as n, true as b, null::text as nothing,
+                '' as empty, '2026-01-02 03:04:05+00'::timestamptz as at,
+                '{"a": [1, 2]}'::jsonb as doc, array[1, 2, 3] as list, decode('dead', 'hex') as raw`,
+        limits,
+      );
+
+      expect(output.columns.map((c) => c.name)).toEqual([
+        'i',
+        'n',
+        'b',
+        'nothing',
+        'empty',
+        'at',
+        'doc',
+        'list',
+        'raw',
+      ]);
+      expect(output.rows).toEqual([
+        [
+          '42',
+          '1.50',
+          't',
+          null,
+          '',
+          '2026-01-02 03:04:05+00',
+          '{"a": [1, 2]}',
+          '{1,2,3}',
+          String.raw`\xdead`,
+        ],
+      ]);
+      expect(output).toMatchObject({ command: 'SELECT', rowCount: 1, truncated: null });
+    });
+
+    it('keeps duplicate column names apart', async () => {
+      const db = await fresh();
+
+      const output = await db.execute(`select 1 as a, 2 as a`, limits);
+
+      expect(output.columns.map((c) => c.name)).toEqual(['a', 'a']);
+      expect(output.rows).toEqual([['1', '2']]);
+    });
+
+    it('reports command tags and counts', async () => {
+      const db = await fresh(`create table t (id int)`);
+
+      expect(await db.execute(`insert into t select generate_series(1, 3)`, limits)).toMatchObject({
+        command: 'INSERT',
+        rowCount: 3,
+        columns: [],
+        rows: [],
+      });
+      expect(await db.execute(`update t set id = id + 1 where id > 1`, limits)).toMatchObject({
+        command: 'UPDATE',
+        rowCount: 2,
+      });
+      expect(await db.execute(`delete from t returning id`, limits)).toMatchObject({
+        command: 'DELETE',
+        rowCount: 3,
+        rows: [['1'], ['3'], ['4']],
+      });
+      expect(await db.execute(`create table u (id int)`, limits)).toMatchObject({
+        command: 'CREATE',
+        rowCount: null,
+      });
+    });
+
+    it('truncates by row count and by size, leaving command and count unknown', async () => {
+      const db = await fresh();
+
+      const byRows = await db.execute(`select generate_series(1, 10)`, { ...limits, maxRows: 4 });
+      expect(byRows).toMatchObject({ truncated: 'rows', command: null, rowCount: null });
+      expect(byRows.rows).toEqual([['1'], ['2'], ['3'], ['4']]);
+
+      const bySize = await db.execute(`select repeat('x', 100) from generate_series(1, 10)`, {
+        ...limits,
+        maxBytes: 250,
+      });
+      expect(bySize).toMatchObject({ truncated: 'bytes', command: null, rowCount: null });
+      expect(bySize.rows).toHaveLength(2);
+
+      const exact = await db.execute(`select generate_series(1, 4)`, { ...limits, maxRows: 4 });
+      expect(exact).toMatchObject({ truncated: null, command: 'SELECT', rowCount: 4 });
+    });
+
+    it('surfaces server errors with SQLSTATE and position', async () => {
+      const db = await fresh();
+
+      const error = await failure(db.execute(`select * from missing_table`, limits));
+
+      expect(error).toEqual({
+        message: 'relation "missing_table" does not exist',
+        code: '42P01',
+        position: 15,
+        detail: null,
+        hint: null,
+      });
+    });
+
+    it('keeps session state across statements: transactions, then recovery', async () => {
+      const db = await fresh(`create table t (id int primary key)`);
+
+      await db.execute(`begin`, limits);
+      await db.execute(`insert into t values (1)`, limits);
+      const duplicate = await failure(db.execute(`insert into t values (1)`, limits));
+      expect(duplicate?.code).toBe('23505');
+
+      const aborted = await failure(db.execute(`select 1`, limits));
+      expect(aborted?.code).toBe('25P02');
+
+      await db.execute(`rollback`, limits);
+      expect((await db.execute(`select count(*) from t`, limits)).rows).toEqual([['0']]);
+    });
+
+    it('runs utility statements that refuse to run inside a transaction block', async () => {
+      const db = await fresh(`create table t (id int)`);
+
+      await expect(db.execute(`vacuum t`, limits)).resolves.toMatchObject({ command: 'VACUUM' });
+    });
+  });
+}
+
+/** Expects a server error and returns it normalised. */
+async function failure(promise: Promise<unknown>) {
+  const error = await promise.then(
+    () => expect.unreachable('expected the statement to fail'),
+    (e: unknown) => e,
+  );
+  const normalised = asDatabaseError(error);
+  if (!normalised) throw error;
+  return normalised;
 }
 
 async function run(db: SqlExecutor, ...statements: string[]): Promise<void> {

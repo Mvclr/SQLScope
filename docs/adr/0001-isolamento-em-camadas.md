@@ -27,12 +27,20 @@ Isolamento existe desde o primeiro commit que executa SQL no servidor — não �
 ### Regras obrigatórias de T1 e T2
 
 - Role da sessão nunca é superuser, nem possui `CREATEROLE`, `CREATEDB`, `pg_read_server_files`, `pg_write_server_files`, `pg_execute_server_program`.
-- `statement_timeout` e `idle_in_transaction_session_timeout` fixados no nível do role (`ALTER ROLE ... SET`), não dependendo de `SET` do cliente.
+- `statement_timeout`, `lock_timeout` e `idle_in_transaction_session_timeout` definidos no role (`ALTER ROLE ... SET`) **apenas como padrão**: o usuário pode alterá-los com `SET` na própria sessão.
+- O limite de tempo que vale é externo: a API cancela com `pg_cancel_backend` (como provisionador, membro do role da sessão) qualquer statement que passe do limite. Ver a correção abaixo.
+- Parâmetros que o usuário não pode alterar (`temp_file_limit`, `max_connections`) ficam na configuração do cluster; os que ele pode alterar (`work_mem`) são contidos pelos limites de CPU, memória e PIDs do container.
 - `CONNECTION LIMIT` por role.
 - Allowlist de extensões. Proibidas: `dblink`, `postgres_fdw`, `file_fdw`, linguagens _untrusted_.
 - `REVOKE CONNECT ON DATABASE ... FROM PUBLIC` em todos os databases; cada role só conecta no seu.
 - Tamanho do database verificado periodicamente por worker; excedeu a cota → sessão encerrada.
 - T2: container sem egress de rede (rede interna sem gateway), limites de CPU/memória/PIDs, filesystem com cota, TTL máximo.
+
+### Correção (Fase 1, 2026-09-19)
+
+A versão original desta ADR dizia que o `statement_timeout` do role era imposto "sem depender de SET do cliente". Isso é falso: `statement_timeout` é um parâmetro de sessão que qualquer role altera (`SET statement_timeout = 0`). Configurá-lo no role define só o padrão. O limite real passou a ser o watchdog da API (`apps/api/src/sandbox/session-connections.ts`), coberto por um teste de integração que roda `SET statement_timeout = 0; SELECT pg_sleep(30)` e exige o cancelamento.
+
+Cada sessão usa também **uma conexão fixa** no processo da API, para que `BEGIN` e `COMMIT` em requisições diferentes cheguem ao mesmo backend. Enquanto isso valer, a API roda em uma única instância; escalar horizontalmente exigirá roteamento por sessão.
 
 ### Regra de ouro
 

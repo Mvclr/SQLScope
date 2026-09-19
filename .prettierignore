@@ -3,3 +3,5 @@ dist
 .next
 coverage
 docs/concept.md
+**/generated
+apps/web/public/monaco

@@ -1,42 +1,171 @@
-/* Design tokens — see docs/DESIGN.md. Dark is the default; light is a first-class theme. */
+@import 'tailwindcss';
+
+/*
+ * Design tokens — docs/DESIGN.md. Components use the semantic names below, never raw
+ * colours. Dark is the default; light is a first-class theme, not an afterthought.
+ */
 :root {
   color-scheme: dark;
   --surface-0: #0b0e11;
-  --surface-1: #12161b;
-  --surface-2: #1a2027;
+  --surface-1: #11161b;
+  --surface-2: #182028;
+  --surface-3: #212b35;
+  --border: #26313c;
   --text: #e6ebf0;
   --text-muted: #9aa6b2;
   --text-faint: #5f6b77;
   --structure: #3fa7a3;
+  --structure-soft: #14302f;
   --accent: #6ee7f0;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --perf-gain: #4ade80;
+  --sev-info: #7aa2f7;
+  --sev-warning: #f5b544;
+  --sev-high: #f27a4f;
+  --sev-critical: #f25f6a;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     color-scheme: light;
-    --surface-0: #f7f9fa;
+    --surface-0: #f5f7f9;
     --surface-1: #ffffff;
-    --surface-2: #eef2f4;
+    --surface-2: #eef2f5;
+    --surface-3: #e2e8ee;
+    --border: #d6dde4;
     --text: #12181e;
     --text-muted: #4f5b66;
     --text-faint: #8a959f;
     --structure: #1f7c78;
+    --structure-soft: #dcefee;
     --accent: #0a8fa0;
+    --perf-gain: #16a34a;
+    --sev-info: #3b64d4;
+    --sev-warning: #b7791f;
+    --sev-high: #c2410c;
+    --sev-critical: #c81e3a;
   }
 }
 
-* {
-  box-sizing: border-box;
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-structure: var(--structure);
+  --color-structure-soft: var(--structure-soft);
+  --color-accent: var(--accent);
+  --color-perf-gain: var(--perf-gain);
+  --color-sev-info: var(--sev-info);
+  --color-sev-warning: var(--sev-warning);
+  --color-sev-high: var(--sev-high);
+  --color-sev-critical: var(--sev-critical);
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
   margin: 0;
-  min-height: 100dvh;
   background: var(--surface-0);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Schema canvas motion (DESIGN.md › Schema canvas) --------------------------------- */
+
+@keyframes table-born {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes column-born {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes delta-halo {
+  from {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  to {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+@keyframes edge-draw {
+  from {
+    stroke-dashoffset: 400;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.table-born {
+  animation: table-born 200ms ease-out both;
+}
+
+.delta-halo {
+  animation: delta-halo 3s ease-out both;
+}
+
+.column-born {
+  animation: column-born 220ms ease-out both;
+}
+
+.column-halo {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  transition: background 3s ease-out;
+}
+
+.edge-born {
+  stroke-dasharray: 400;
+  animation: edge-draw 350ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-born,
+  .column-born,
+  .edge-born {
+    animation: none;
+  }
+}
+
+/* React Flow draws its own chrome; align it with the tokens. */
+.react-flow {
+  --xy-background-color: var(--surface-0);
+  --xy-edge-stroke: var(--structure);
+  --xy-edge-stroke-selected: var(--accent);
+  --xy-controls-button-background-color: var(--surface-2);
+  --xy-controls-button-background-color-hover: var(--surface-3);
+  --xy-controls-button-color: var(--text);
+  --xy-controls-button-border-color: var(--border);
+  --xy-attribution-background-color: transparent;
 }

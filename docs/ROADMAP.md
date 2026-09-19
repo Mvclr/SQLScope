@@ -13,7 +13,7 @@ Substitui a seção 36 do [conceito](concept.md). Princípios: isolamento desde 
 
 **Pronto quando:** CI verde executando a suíte de `core` nas duas engines.
 
-## Fase 1 — v0.1: Playground visual (primeiro lançamento público)
+## Fase 1 — v0.1: Playground visual — implementada, falta publicar
 
 - Editor Monaco, `Ctrl+Enter`, erros com posição.
 - Tabela de resultados virtualizada com afinidade de tipo.
@@ -23,8 +23,8 @@ Substitui a seção 36 do [conceito](concept.md). Princípios: isolamento desde 
 - Import de schema (DDL colado) em T0.
 - Histórico da sessão (log de eventos).
 - Rate limit e quota por IP.
-- Deploy público em VPS.
-- README com GIF do canvas animado.
+- Deploy público em VPS. **Pendente**: depende de um servidor.
+- README com GIF do canvas animado. **Pendente**: gravar a partir do deploy.
 
 **Pronto quando:** um visitante anônimo abre o site, aperta Run, e vê a tabela nascer — em T0 e em T1.
 

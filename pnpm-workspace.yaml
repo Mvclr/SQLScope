@@ -2,8 +2,10 @@ packages:
   - apps/*
   - packages/*
 allowBuilds:
+  '@prisma/engines': true
   '@swc/core': true
   cpu-features: false
+  prisma: true
   protobufjs: false
   ssh2: false
 minimumReleaseAgeExclude:
@@ -15,3 +17,5 @@ minimumReleaseAgeExclude:
   - '@turbo/windows-arm64@2.11.1'
   - prettier@3.9.8
   - turbo@2.11.1
+patchedDependencies:
+  libpg-query@18.1.5: patches/libpg-query@18.1.5.patch

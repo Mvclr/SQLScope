@@ -1,0 +1,34 @@
+{
+  "name": "@sqlscope/engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Runs user SQL scripts against any SqlSession and reports results and schema changes.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./display": {
+      "types": "./dist/display.d.ts",
+      "default": "./dist/display.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sqlscope/core": "workspace:*",
+    "@sqlscope/sql-parser": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "vitest": "5.0.1"
+  }
+}

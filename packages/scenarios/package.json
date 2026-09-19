@@ -1,0 +1,35 @@
+{
+  "name": "@sqlscope/scenarios",
+  "version": "0.0.0",
+  "private": true,
+  "description": "LEARN scenarios as data, and the challenge checker that validates answers across dataset variants.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./check": {
+      "types": "./dist/check.d.ts",
+      "default": "./dist/check.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sqlscope/core": "workspace:*",
+    "@sqlscope/engine": "workspace:*",
+    "@sqlscope/sql-parser": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "vitest": "5.0.1"
+  }
+}

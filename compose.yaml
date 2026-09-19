@@ -6,26 +6,44 @@ name: sqlscope
 
 services:
   web:
-    build: { context: ., dockerfile: apps/web/Dockerfile }
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args: { API_INTERNAL_URL: 'http://api:4000' }
+    # The only public entry point: the browser reaches the API through /api on this origin.
     ports: ['3000:3000']
     networks: [public]
     depends_on:
       api: { condition: service_healthy }
 
   api:
-    build: { context: ., dockerfile: apps/api/Dockerfile }
-    ports: ['4000:4000']
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: runtime }
+    # Loopback only. Published publicly, anyone could forge X-Forwarded-For and dodge the
+    # per-client limits, which trust the web proxy as the single hop in front.
+    ports: ['127.0.0.1:4000:4000']
     environment:
       NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      TRUST_PROXY: 1
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SESSION_SECRET: ${SESSION_SECRET:-dev-only-session-secret-change-me-0123456789}
       CONTROL_DATABASE_URL: postgres://sqlscope:${CONTROL_DB_PASSWORD:-sqlscope}@postgres-control:5432/sqlscope
       SANDBOX_DATABASE_URL: postgres://sqlscope_provisioner:${SANDBOX_PROVISIONER_PASSWORD:-sandbox-provisioner}@postgres-sandbox:5432/postgres
       REDIS_URL: redis://:${REDIS_PASSWORD:-sqlscope}@redis:6379
     networks: [public, control, sandbox]
     depends_on:
-      postgres-control: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
       postgres-sandbox: { condition: service_healthy }
       redis: { condition: service_healthy }
+
+  # Applies Prisma migrations to the control database, then exits.
+  migrate:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: migrate }
+    environment:
+      CONTROL_DATABASE_URL: postgres://sqlscope:${CONTROL_DB_PASSWORD:-sqlscope}@postgres-control:5432/sqlscope
+    networks: [control]
+    depends_on:
+      postgres-control: { condition: service_healthy }
 
   postgres-control:
     image: postgres:18-alpine
@@ -44,6 +62,19 @@ services:
   # T1: one database per session (ADR 0001). Disposable by design — no volume.
   postgres-sandbox:
     image: postgres:18-alpine
+    # Settings a session role cannot SET for itself (ADR 0001). What it can SET, such as
+    # work_mem, is bounded by the container limits below.
+    command:
+      - postgres
+      - -c
+      - max_connections=300
+      - -c
+      - temp_file_limit=512MB
+      - -c
+      - log_min_error_statement=panic
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 512
     environment:
       POSTGRES_PASSWORD: ${SANDBOX_SUPERUSER_PASSWORD:-sandbox-superuser}
       SANDBOX_PROVISIONER_PASSWORD: ${SANDBOX_PROVISIONER_PASSWORD:-sandbox-provisioner}

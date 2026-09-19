@@ -4,7 +4,13 @@
 
 Ambiente interativo para construir, visualizar, analisar e proteger bancos de dados relacionais — com SQL executado em PostgreSQL real e isolado, e cada efeito mostrado visualmente.
 
-> **Status:** Fase 0 (fundação) concluída. Próximo: [Fase 1 — playground visual](docs/ROADMAP.md).
+> **Status:** Fase 1 (playground visual) implementada; falta o deploy público. Ver o [roadmap](docs/ROADMAP.md).
+
+## O que dá para fazer
+
+- **Learn**: cenários (loja online, biblioteca) com desafios corrigidos automaticamente. Tudo roda no navegador, com PostgreSQL compilado para WebAssembly (PGlite).
+- **Build**: um PostgreSQL 18 só seu no servidor, isolado e descartável. Cada `CREATE`, `ALTER` e FK aparece no diagrama no momento em que é executado.
+- **Importar**: cole o DDL de um schema existente e veja tabelas, chaves e relacionamentos.
 
 ## Rodando
 
@@ -14,8 +20,8 @@ Requisitos: Docker e, para desenvolvimento, Node.js ≥ 22.12 com corepack habil
 docker compose up --build
 ```
 
-- Web: http://localhost:3000
-- API: http://localhost:4000/health/ready
+- Web: http://localhost:3000 (a única porta pública; o navegador fala com a API por `/api`)
+- API: http://localhost:4000/health/ready (só em loopback)
 
 ### Desenvolvimento
 
@@ -27,24 +33,27 @@ cp apps/api/.env.example apps/api/.env
 pnpm dev
 ```
 
-| Comando                 | O que faz                                                              |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `pnpm test`             | Testes unitários (inclui o contrato de engine rodando no PGlite)       |
-| `pnpm test:integration` | O mesmo contrato contra PostgreSQL 18 real via Testcontainers (Docker) |
-| `pnpm lint`             | ESLint                                                                 |
-| `pnpm typecheck`        | TypeScript                                                             |
-| `pnpm format`           | Prettier                                                               |
+| Comando                 | O que faz                                                         |
+| ----------------------- | ----------------------------------------------------------------- |
+| `pnpm test`             | Testes unitários (inclui o contrato de engine rodando no PGlite)  |
+| `pnpm test:integration` | Contrato em PostgreSQL 18 real e API completa, via Testcontainers |
+| `pnpm lint`             | ESLint                                                            |
+| `pnpm typecheck`        | TypeScript                                                        |
+| `pnpm format`           | Prettier                                                          |
 
 ## Estrutura
 
 ```
 apps/
-  api/          NestJS — API pública (health checks, logs estruturados, config validada)
-  web/          Next.js — interface
+  api/          NestJS — sessões T1, provisionamento, execução, SSE, rate limit, reaper
+  web/          Next.js — editor Monaco, resultados, diagrama do schema, Learn/Build/Importar
 packages/
   core/         SqlExecutor, introspecção, SchemaSnapshot, diff — idêntico em PGlite e PostgreSQL
   sql-parser/   split e classificação de statements com o parser real do PostgreSQL (libpg_query)
+  engine/       runScript: executa scripts e calcula mudanças no schema, igual no navegador e na API
+  scenarios/    cenários do Learn como dados, e o validador de respostas por variantes
 infra/          bootstrap do cluster de sandbox (role provisionador não-superuser)
+patches/        patch do libpg-query para localizar o WASM no navegador
 docs/           conceito, arquitetura, roadmap, design e ADRs
 ```
 

@@ -1,0 +1,18 @@
+diff --git a/wasm/index.js b/wasm/index.js
+index c523bb86e9439b0a50f8f511bb9a313412e01268..d5afdddb0f729ac92006e10ea5638b101919a2ac 100644
+--- a/wasm/index.js	
++++ b/wasm/index.js
+@@ -72,7 +72,12 @@ export function formatSqlError(error, query, options = {}) {
+ // @ts-ignore
+ import PgQueryModule from './libpg-query.js';
+ let wasmModule;
+-const initPromise = PgQueryModule().then((module) => {
++// SQLScope patch: in browsers, locate the .wasm next to this module through import.meta.url,
++// which bundlers understand. Emscripten's default resolves it against the page URL.
++const moduleOptions = typeof window === 'undefined'
++    ? {}
++    : { locateFile: (path) => path.endsWith('.wasm') ? new URL('./libpg-query.wasm', import.meta.url).href : path };
++const initPromise = PgQueryModule(moduleOptions).then((module) => {
+     wasmModule = module;
+ });
+ function ensureLoaded() {

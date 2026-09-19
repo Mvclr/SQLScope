@@ -46,11 +46,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build and start
-        run: docker compose up --detach --build --wait --wait-timeout 180
+        run: docker compose up --detach --build --wait --wait-timeout 300
       - name: API is ready
         run: curl --fail --silent --show-error http://localhost:4000/health/ready
-      - name: Web responds
-        run: curl --fail --silent --show-error --output /dev/null http://localhost:3000
+      - name: Pages render
+        run: |
+          for path in / /learn /learn/loja-online /build /import /monaco/vs/loader.js; do
+            curl --fail --silent --show-error --output /dev/null "http://localhost:3000$path"
+          done
+      - name: A session runs SQL through the web proxy
+        run: |
+          curl --fail --silent --show-error -c jar -b jar -X POST http://localhost:3000/api/sessions > /dev/null
+          curl --fail --silent --show-error -c jar -b jar -X POST \
+            -H 'Content-Type: application/json' \
+            -d '{"sql":"create table t (id int); insert into t values (1), (2); select count(*) from t"}' \
+            http://localhost:3000/api/sessions/current/execute > result.json
+          jq -e '[.statements[].status] == ["ok","ok","ok"]' result.json
+          jq -e '.statements[2].output.rows == [["2"]]' result.json
+          jq -e '.schema.changes[0].type == "table-created"' result.json
       - name: Sandbox cluster is isolated from the control database
         run: |
           if docker compose exec -T postgres-sandbox pg_isready -h postgres-control -t 3; then

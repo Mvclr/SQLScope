@@ -1,0 +1,54 @@
+// SQLScope's own database. User SQL never runs here (concept §24, ADR 0001).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SessionStatus {
+  PROVISIONING
+  ACTIVE
+  EXPIRED
+  DESTROYED
+  FAILED
+}
+
+/// One disposable T1 sandbox: a database and a role on the sandbox cluster (ADR 0001).
+model Session {
+  id           String        @id @default(uuid()) @db.Uuid
+  status       SessionStatus @default(PROVISIONING)
+  /// Also the name of its role. Random, validated before being used in DDL.
+  databaseName String        @unique @map("database_name")
+  /// Credential of the ephemeral role. Lives only as long as the sandbox.
+  rolePassword String        @map("role_password")
+  /// sha256 of the client address with a server secret; never the address itself.
+  clientHash   String        @map("client_hash")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  lastActiveAt DateTime      @default(now()) @map("last_active_at")
+  endedAt      DateTime?     @map("ended_at")
+  endReason    String?       @map("end_reason")
+  events       SessionEvent[]
+
+  @@index([status, lastActiveAt])
+  @@index([clientHash, status])
+  @@map("sessions")
+}
+
+/// Append-only history of a session (ADR 0004). `seq` orders events within a session.
+model SessionEvent {
+  sessionId String   @map("session_id") @db.Uuid
+  seq       Int
+  type      String
+  payload   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, seq])
+  @@index([sessionId, type, seq])
+  @@map("session_events")
+}

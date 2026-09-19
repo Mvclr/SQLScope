@@ -5,6 +5,7 @@ const valid = {
   CONTROL_DATABASE_URL: 'postgres://u:p@localhost:5432/control',
   SANDBOX_DATABASE_URL: 'postgres://u:p@localhost:5433/postgres',
   REDIS_URL: 'redis://localhost:6379',
+  SESSION_SECRET: 'x'.repeat(32),
 };
 
 describe('loadConfig', () => {
@@ -22,6 +23,10 @@ describe('loadConfig', () => {
 
   it('refuses to start without the connection strings', () => {
     expect(() => loadConfig({})).toThrow(/CONTROL_DATABASE_URL/);
+  });
+
+  it('refuses a short session secret', () => {
+    expect(() => loadConfig({ ...valid, SESSION_SECRET: 'short' })).toThrow(/SESSION_SECRET/);
   });
 
   it('rejects malformed URLs', () => {

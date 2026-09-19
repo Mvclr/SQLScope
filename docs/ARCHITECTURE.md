@@ -43,21 +43,42 @@ Três redes Docker separadas: `public` (web ↔ api), `control` (api ↔ postgre
 ## Fluxo: executar SQL (T1)
 
 ```
-POST /sessions/:id/execute { sql }
+POST /sessions/current/execute { sql }          (cookie de sessão assinado)
   │
-  ├─ sql-parser.split(sql)         → statements com posição
-  ├─ sql-parser.classify(each)     → ddl | dml | read | tx | utility
-  ├─ executor.run(stmt)            → cursor, limite de linhas e bytes, timeout
-  │     └─ erro de SQL → Result.err (com posição para o Monaco), não exceção
-  ├─ se algum DDL:
-  │     introspect() → SchemaSnapshot
-  │     diffSnapshots(prev, next) → SchemaChange[]
-  ├─ append eventos no log da sessão (ADR 0004)
-  ├─ publica SchemaChanged via SSE
-  └─ responde (streaming NDJSON para resultados grandes)
+  ├─ SessionGuard → RateLimitGuard (Redis, por cliente e por sessão)
+  ├─ conexão fixa da sessão, serializada entre abas
+  └─ engine.runScript(session, sql)
+        ├─ sql-parser: divide e classifica (changesCatalog / changesData)
+        ├─ session.execute(stmt) → cursor; limite de linhas e bytes; watchdog de tempo
+        │     └─ erro de SQL → resultado com posição no script, não exceção HTTP
+        ├─ se algo executado pode ter mudado o catálogo:
+        │     introspect() → SchemaSnapshot; diffSnapshots(prev, next) → SchemaChange[]
+        ├─ log de eventos da sessão (ADR 0004)
+        └─ SSE `schema-changed` para as outras abas da sessão
 ```
 
-No T0 o fluxo é idêntico, mas `executor` é o PGlite no navegador e não há HTTP. Essa simetria é garantida pela interface `SqlExecutor` em `packages/core`.
+No T0 o mesmo `runScript` roda no navegador sobre o PGlite, sem HTTP. A simetria vem das interfaces `SqlExecutor`/`SqlSession` de `packages/core`, e uma suíte de contrato roda os mesmos testes nas duas engines.
+
+## Pacotes
+
+| Pacote                 | Onde roda         | Papel                                                                        |
+| ---------------------- | ----------------- | ---------------------------------------------------------------------------- |
+| `@sqlscope/core`       | navegador e Node  | `SqlSession`, introspecção, `SchemaSnapshot`, diff, adapters `pg` e `pglite` |
+| `@sqlscope/sql-parser` | navegador e Node  | libpg_query: divisão, classificação, conversão de posições                   |
+| `@sqlscope/engine`     | navegador e Node  | `runScript`; `engine/display` com metadados de tipo para a UI                |
+| `@sqlscope/scenarios`  | navegador (e SSR) | cenários como dados; `scenarios/check` valida respostas por variantes        |
+| `apps/api`             | Node              | sessões T1, provisionador, execução, SSE, rate limit, reaper                 |
+| `apps/web`             | navegador e Node  | Next.js: Learn (T0), Build (T1), Importar (T0)                               |
+
+O web só carrega engine, parser e validador **sob demanda**: eles trazem WebAssembly, que não pode ser instanciado durante o SSR e não é necessário para desenhar a página.
+
+## Sessões T1
+
+- Database e role `sbx_<24 hex>` por sessão, criados pelo provisionador não-superuser (ADR 0001).
+- Uma conexão fixa por sessão no processo da API. Limite de tempo imposto por watchdog com `pg_cancel_backend`, porque `statement_timeout` pode ser alterado pelo usuário.
+- Reaper a cada 30 s: expira sessões ociosas, antigas ou acima da cota de tamanho; refaz destruições que falharam; remove databases e roles `sbx_` sem sessão viva.
+- Cookie `httpOnly`, assinado, `SameSite=Lax`. O endereço do cliente nunca é guardado, só um HMAC dele.
+- A API é publicada só em loopback. O web é a única entrada pública e o único proxy em que o `X-Forwarded-For` é confiável.
 
 ## Fluxo: lab T2
 

@@ -1,8 +1,10 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
 import { CONFIG, type Config } from './config.js';
+import { ExecutionModule } from './execution/execution.module.js';
 import { HealthModule } from './health/health.module.js';
 import { InfrastructureModule } from './infrastructure/infrastructure.module.js';
+import { SessionsModule } from './sessions/sessions.module.js';
 
 @Module({})
 export class AppModule {
@@ -28,6 +30,8 @@ export class AppModule {
         }),
         InfrastructureModule,
         HealthModule,
+        SessionsModule,
+        ExecutionModule,
       ],
       providers: [{ provide: CONFIG, useValue: config }],
       exports: [CONFIG],

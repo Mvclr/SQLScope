@@ -44,7 +44,11 @@
     "@electric-sql/pglite": "0.5.8",
     "@testcontainers/postgresql": "12.1.0",
     "@types/pg": "8.23.1",
+    "@types/pg-cursor": "2.7.2",
     "pg": "8.23.0",
     "vitest": "5.0.1"
+  },
+  "dependencies": {
+    "pg-cursor": "2.22.0"
   }
 }
