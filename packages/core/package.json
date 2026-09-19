@@ -1,0 +1,50 @@
+{
+  "name": "@sqlscope/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Engine-agnostic schema introspection, snapshots and diffs.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./pglite": {
+      "types": "./dist/adapters/pglite.d.ts",
+      "default": "./dist/adapters/pglite.js"
+    },
+    "./pg": {
+      "types": "./dist/adapters/pg.d.ts",
+      "default": "./dist/adapters/pg.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --project unit",
+    "test:integration": "vitest run --project integration"
+  },
+  "peerDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "pg": "^8.23.0"
+  },
+  "peerDependenciesMeta": {
+    "@electric-sql/pglite": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@testcontainers/postgresql": "12.1.0",
+    "@types/pg": "8.23.1",
+    "pg": "8.23.0",
+    "vitest": "5.0.1"
+  }
+}

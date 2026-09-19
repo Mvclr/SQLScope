@@ -1,0 +1,33 @@
+.main {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  min-height: 100dvh;
+  padding: 24px;
+  text-align: center;
+}
+
+.mark {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 8px;
+  color: var(--accent);
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tagline {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--structure);
+}
+
+.status {
+  margin: 16px 0 0;
+  color: var(--text-muted);
+}

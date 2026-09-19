@@ -1,0 +1,18 @@
+# Data services only, published on localhost, for running web and api with `pnpm dev`:
+#   docker compose -f compose.yaml -f compose.dev.yaml up postgres-control postgres-sandbox redis
+# Internal networks cannot publish ports, so each service also joins a routable one here.
+# Host ports avoid the defaults (5432, 6379), which a local install often already holds.
+
+services:
+  postgres-control:
+    ports: ['127.0.0.1:${CONTROL_DB_PORT:-15432}:5432']
+    networks: [control, dev]
+  postgres-sandbox:
+    ports: ['127.0.0.1:${SANDBOX_DB_PORT:-15433}:5432']
+    networks: [sandbox, dev]
+  redis:
+    ports: ['127.0.0.1:${REDIS_PORT:-16379}:6379']
+    networks: [control, dev]
+
+networks:
+  dev:

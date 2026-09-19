@@ -1,0 +1,30 @@
+{
+  "name": "@sqlscope/sql-parser",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Statement splitting and classification on top of PostgreSQL's own parser (libpg_query).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pgsql/types": "18.0.0",
+    "@sqlscope/core": "workspace:*",
+    "libpg-query": "18.1.5"
+  },
+  "devDependencies": {
+    "vitest": "5.0.1"
+  }
+}

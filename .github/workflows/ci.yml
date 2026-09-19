@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm exec turbo run lint typecheck test build
+
+  integration:
+    name: Engine contract on PostgreSQL (Testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:integration
+
+  stack:
+    name: Full stack smoke test (docker compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and start
+        run: docker compose up --detach --build --wait --wait-timeout 180
+      - name: API is ready
+        run: curl --fail --silent --show-error http://localhost:4000/health/ready
+      - name: Web responds
+        run: curl --fail --silent --show-error --output /dev/null http://localhost:3000
+      - name: Sandbox cluster is isolated from the control database
+        run: |
+          if docker compose exec -T postgres-sandbox pg_isready -h postgres-control -t 3; then
+            echo "::error::postgres-sandbox can reach postgres-control"
+            exit 1
+          fi
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
+      - name: Tear down
+        if: always()
+        run: docker compose down --volumes

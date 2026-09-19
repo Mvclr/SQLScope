@@ -1,0 +1,42 @@
+/* Design tokens — see docs/DESIGN.md. Dark is the default; light is a first-class theme. */
+:root {
+  color-scheme: dark;
+  --surface-0: #0b0e11;
+  --surface-1: #12161b;
+  --surface-2: #1a2027;
+  --text: #e6ebf0;
+  --text-muted: #9aa6b2;
+  --text-faint: #5f6b77;
+  --structure: #3fa7a3;
+  --accent: #6ee7f0;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --surface-0: #f7f9fa;
+    --surface-1: #ffffff;
+    --surface-2: #eef2f4;
+    --text: #12181e;
+    --text-muted: #4f5b66;
+    --text-faint: #8a959f;
+    --structure: #1f7c78;
+    --accent: #0a8fa0;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--surface-0);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
