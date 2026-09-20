@@ -4,13 +4,16 @@
 
 Ambiente interativo para construir, visualizar, analisar e proteger bancos de dados relacionais — com SQL executado em PostgreSQL real e isolado, e cada efeito mostrado visualmente.
 
-> **Status:** Fase 1 (playground visual) implementada; falta o deploy público. Ver o [roadmap](docs/ROADMAP.md).
+> **Status:** Fases 1 e 2 implementadas; falta o deploy público. Ver o [roadmap](docs/ROADMAP.md).
 
 ## O que dá para fazer
 
 - **Learn**: cenários (loja online, biblioteca) com desafios corrigidos automaticamente. Tudo roda no navegador, com PostgreSQL compilado para WebAssembly (PGlite).
 - **Build**: um PostgreSQL 18 só seu no servidor, isolado e descartável. Cada `CREATE`, `ALTER` e FK aparece no diagrama no momento em que é executado.
 - **Importar**: cole o DDL de um schema existente e veja tabelas, chaves e relacionamentos.
+- **Medir e comparar**: analise uma consulta, veja o plano de execução com tempo real por nó, crie um índice e compare o antes e o depois.
+- **Relatório de segurança**: 11 regras sobre chaves, índices, privilégios e isolamento, cada achado com o que fazer a respeito.
+- **Guardar e compartilhar**: histórico com time-travel e replay, link que reconstrói a sessão no navegador de quem abrir, export em SQL, DBML e PNG, e conta para salvar projetos.
 
 ## Rodando
 
@@ -50,6 +53,8 @@ apps/
 packages/
   core/         SqlExecutor, introspecção, SchemaSnapshot, diff — idêntico em PGlite e PostgreSQL
   sql-parser/   split e classificação de statements com o parser real do PostgreSQL (libpg_query)
+  explain/      plano do EXPLAIN em árvore tipada, com observações sobre onde vai o tempo
+  security-rules/ regras determinísticas sobre o schema e seus privilégios
   engine/       runScript: executa scripts e calcula mudanças no schema, igual no navegador e na API
   scenarios/    cenários do Learn como dados, e o validador de respostas por variantes
 infra/          bootstrap do cluster de sandbox (role provisionador não-superuser)
@@ -71,6 +76,7 @@ docs/           conceito, arquitetura, roadmap, design e ADRs
   - [0005 — HTTP, SSE e WebSocket](docs/adr/0005-transporte-http-sse-ws.md)
   - [0006 — Security Analyzer com regras puras](docs/adr/0006-security-analyzer-regras-puras.md)
   - [0007 — Monorepo e stack](docs/adr/0007-monorepo-e-stack.md)
+  - [0008 — Contas guardam SQL, não bancos](docs/adr/0008-contas-e-projetos.md)
 
 ## Licença
 

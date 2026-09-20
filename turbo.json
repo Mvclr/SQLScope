@@ -25,6 +25,22 @@
     },
     "@sqlscope/web#typecheck": {
       "dependsOn": ["^build", "build"]
+    },
+    "generate": {
+      "outputs": ["src/generated/**"]
+    },
+    "@sqlscope/api#build": {
+      "dependsOn": ["^build", "generate"]
+    },
+    "@sqlscope/api#typecheck": {
+      "dependsOn": ["^build", "generate"]
+    },
+    "@sqlscope/api#test": {
+      "dependsOn": ["^build", "generate"]
+    },
+    "@sqlscope/api#test:integration": {
+      "dependsOn": ["^build", "generate"],
+      "cache": false
     }
   }
 }

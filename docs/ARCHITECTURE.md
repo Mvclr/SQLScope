@@ -61,14 +61,16 @@ No T0 o mesmo `runScript` roda no navegador sobre o PGlite, sem HTTP. A simetria
 
 ## Pacotes
 
-| Pacote                 | Onde roda         | Papel                                                                        |
-| ---------------------- | ----------------- | ---------------------------------------------------------------------------- |
-| `@sqlscope/core`       | navegador e Node  | `SqlSession`, introspecção, `SchemaSnapshot`, diff, adapters `pg` e `pglite` |
-| `@sqlscope/sql-parser` | navegador e Node  | libpg_query: divisão, classificação, conversão de posições                   |
-| `@sqlscope/engine`     | navegador e Node  | `runScript`; `engine/display` com metadados de tipo para a UI                |
-| `@sqlscope/scenarios`  | navegador (e SSR) | cenários como dados; `scenarios/check` valida respostas por variantes        |
-| `apps/api`             | Node              | sessões T1, provisionador, execução, SSE, rate limit, reaper                 |
-| `apps/web`             | navegador e Node  | Next.js: Learn (T0), Build (T1), Importar (T0)                               |
+| Pacote                     | Onde roda         | Papel                                                                        |
+| -------------------------- | ----------------- | ---------------------------------------------------------------------------- |
+| `@sqlscope/core`           | navegador e Node  | `SqlSession`, introspecção, `SchemaSnapshot`, diff, adapters `pg` e `pglite` |
+| `@sqlscope/sql-parser`     | navegador e Node  | libpg_query: divisão, classificação, conversão de posições                   |
+| `@sqlscope/engine`         | navegador e Node  | `runScript`, `analyzeQuery`; `engine/display` para a UI                      |
+| `@sqlscope/explain`        | navegador e Node  | plano do `EXPLAIN` em árvore tipada e observações sobre ele                  |
+| `@sqlscope/security-rules` | navegador e Node  | regras puras sobre snapshot e privilégios (ADR 0006)                         |
+| `@sqlscope/scenarios`      | navegador (e SSR) | cenários como dados; `scenarios/check` valida respostas por variantes        |
+| `apps/api`                 | Node              | sessões T1, provisionador, execução, SSE, rate limit, reaper                 |
+| `apps/web`                 | navegador e Node  | Next.js: Learn (T0), Build (T1), Importar (T0)                               |
 
 O web só carrega engine, parser e validador **sob demanda**: eles trazem WebAssembly, que não pode ser instanciado durante o SSR e não é necessário para desenhar a página.
 
@@ -92,18 +94,24 @@ POST /labs/:labId/start
   → reconciliador converge qualquer divergência
 ```
 
+## Contas e projetos
+
+Ver ADR 0008. Um projeto guarda **o SQL**, não o banco: reabrir é reexecutar em um sandbox
+novo. Links compartilhados levam os mesmos scripts comprimidos no fragmento da URL, que o
+navegador não envia ao servidor.
+
 ## Módulos da API (NestJS)
 
 | Módulo          | Responsabilidade                                                                |
 | --------------- | ------------------------------------------------------------------------------- |
 | `sessions`      | Ciclo de vida da sessão, tier, TTL, cookie anônimo                              |
-| `execution`     | Executar SQL, EXPLAIN, streaming, limites                                       |
+| `execution`     | Executar SQL, analisar consultas (EXPLAIN), relatório de segurança              |
 | `introspection` | Snapshot e diff (delegando a `packages/core`)                                   |
 | `events`        | Log append-only, projeções, SSE                                                 |
 | `scenarios`     | Carregar cenários de `packages/scenarios`, criar templates T1, validar desafios |
-| `analysis`      | Montar `AnalysisContext`, rodar `RuleRegistry`                                  |
+| `analysis`      | Montar o contexto de análise e rodar as regras (dentro de `execution`)          |
 | `labs`          | Orquestrar labs T2, incluindo o WS de concorrência                              |
-| `auth`          | Registro, login, sessão; associação de sessões anônimas                         |
+| `auth`          | Contas (argon2id), projetos salvos, sessão anônima assumida no login (ADR 0008) |
 
 Dependências entre módulos são explícitas via exports do Nest; nenhum módulo acessa o repositório de outro diretamente.
 
@@ -120,9 +128,17 @@ A query do usuário e a solução de referência são executadas contra **vária
 
 ## Performance / EXPLAIN
 
-- Sempre `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`.
-- DML sob `ANALYZE` roda dentro de `BEGIN … ROLLBACK` — analisar nunca altera dados.
-- Comparação antes/depois executa N vezes, descarta a primeira (cache frio) e exibe mediana e buffers lidos (`shared hit` vs `read`). A UI explica que o resultado é indicativo.
+- Consultas de leitura: `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`, executadas de verdade.
+- **Qualquer outra instrução recebe só o plano estimado, sem executar.** A ideia original
+  era envolver DML em `BEGIN … ROLLBACK`, mas a sessão T1 é uma conexão fixa onde o
+  usuário pode já ter uma transação aberta: o `ROLLBACK` desfaria o trabalho dele. Não há
+  como detectar isso de forma confiável pelos drivers, então a medição é recusada e a
+  interface diz o motivo.
+- Comparação antes/depois executa N vezes, descarta a primeira (cache frio) e exibe a
+  mediana com os buffers lidos (`shared hit` vs `read`).
+- Uma diferença só é apresentada como ganho quando os tempos saem do piso de ruído (1 ms)
+  ou quando o **caminho de acesso** muda. Em tabelas pequenas, a razão entre dois tempos de
+  microssegundos não significa nada, e afirmar o contrário ensinaria errado.
 
 ## Segurança — resumo
 

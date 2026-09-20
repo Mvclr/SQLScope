@@ -12,4 +12,11 @@ export {
   type StatementOutput,
 } from './session.js';
 export { introspect } from './introspection/introspect.js';
+export {
+  readPrivileges,
+  type DatabasePrivileges,
+  type Grant,
+  type RoleSummary,
+  type RowPolicy,
+} from './introspection/privileges.js';
 export { diffSnapshots, type ColumnAttribute, type SchemaChange } from './diff.js';

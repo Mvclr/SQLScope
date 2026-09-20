@@ -28,15 +28,18 @@ Substitui a seção 36 do [conceito](concept.md). Princípios: isolamento desde 
 
 **Pronto quando:** um visitante anônimo abre o site, aperta Run, e vê a tabela nascer — em T0 e em T1.
 
-## Fase 2 — v0.2: Performance e análise
+## Fase 2 — v0.2: Performance e análise — implementada
 
-- `packages/explain`: plano JSON → árvore tipada.
-- Visualizador de plano (grafo com custo, linhas estimadas vs reais, buffers).
-- Comparação antes/depois de índice (N execuções, mediana).
-- `packages/security-rules` + Security Analyzer — roda em T0 (schemas importados) e T1.
-- Time-travel e replay do histórico; links compartilháveis.
-- Autenticação (cookie + argon2id), salvar projetos, migrar sessão anônima.
-- Export: DDL, DBML, PNG do diagrama.
+- `packages/explain`: plano JSON → árvore tipada, com observações sobre o que pesa nele.
+- Painel de plano: tempo real por nó, estimado × real, buffers e o caminho de acesso.
+- Comparação antes/depois de índice (mediana de execuções, primeira descartada).
+- `packages/security-rules` + Security Analyzer — roda em T0 e T1, com 11 regras.
+- Time-travel e replay do histórico; links compartilháveis (SQL no fragmento da URL).
+- Autenticação (cookie + argon2id), projetos salvos, sessão anônima assumida no login (ADR 0008).
+- Export: DDL, DBML e PNG do diagrama.
+
+**Pronto quando:** dá para medir uma consulta, criar um índice, ver a diferença no plano, e
+receber um relatório de segurança do próprio banco.
 
 ## Fase 3 — v0.3: Sandbox T2 e primeiros labs SECURE
 

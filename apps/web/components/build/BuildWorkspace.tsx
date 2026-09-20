@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
+import { readProject } from '../../lib/account';
 import { apiBackend, endSession, type SessionInfo } from '../workspace/api-backend';
 import { createWorkspaceStore, type WorkspaceStore } from '../workspace/store';
 import { Workspace } from '../workspace/Workspace';
+import { SaveProjectButton } from './SaveProjectButton';
 
 const starter = `-- Seu banco PostgreSQL 18, isolado e descartável.
 -- Crie tabelas e veja o diagrama se formar ao lado. Ctrl+Enter executa.
@@ -26,14 +29,53 @@ create table orders (
 export function BuildWorkspace() {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [store] = useState(() => createWorkspaceStore(apiBackend(setSession), starter));
+  const projectId = useSearchParams().get('projeto');
+
+  useProjectReplay(store, projectId);
 
   return (
     <Workspace
       store={store}
       openingLabel="Criando seu banco no servidor…"
-      actions={<SessionControls store={store} session={session} />}
+      actions={
+        <>
+          <div className="ml-auto flex items-center gap-3">
+            <SaveProjectButton store={store} />
+            <SessionControls store={store} session={session} />
+          </div>
+        </>
+      }
     />
   );
+}
+
+/** Reopening a project replays its statements into the session's sandbox. */
+function useProjectReplay(store: WorkspaceStore, projectId: string | null) {
+  const replayed = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!projectId || replayed.current === projectId) return;
+    replayed.current = projectId;
+
+    void (async () => {
+      const project = await readProject(projectId).catch(() => null);
+      if (!project) return;
+      await waitUntilReady(store);
+      for (const script of project.scripts) await store.getState().run(script);
+      store.getState().setSql(project.scripts.at(-1) ?? '');
+    })();
+  }, [store, projectId]);
+}
+
+function waitUntilReady(store: WorkspaceStore): Promise<void> {
+  if (store.getState().status === 'ready') return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsubscribe = store.subscribe((state) => {
+      if (state.status === 'opening') return;
+      unsubscribe();
+      resolve();
+    });
+  });
 }
 
 /** Idle countdown, reset by each run; the server enforces the real expiry. */
@@ -65,7 +107,7 @@ function SessionControls({
   const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
   return (
-    <div className="ml-auto flex items-center gap-3 text-[12px] text-muted">
+    <div className="flex items-center gap-3 text-[12px] text-muted">
       <span title="Sem atividade por este tempo, o banco é descartado">
         Sessão expira em <span className="tabular-nums text-text">{clock}</span>
       </span>

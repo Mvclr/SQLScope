@@ -26,6 +26,20 @@ interface SecurityRule {
 - Regras são registradas num `RuleRegistry` (Strategy + Registry). Adicionar regra = adicionar arquivo, sem tocar no motor.
 - O pacote `packages/security-rules` não depende de nenhum driver de banco.
 
+### Estado das regras (Fase 2)
+
+11 regras: chave primária ausente, chave estrangeira sem índice, índices redundantes,
+tabela multi-tenant sem RLS, RLS sem política, RLS sem FORCE, coluna sensível em texto,
+tabela liberada para PUBLIC, schema gravável por PUBLIC, privilégios excessivos e role de
+login com poderes administrativos.
+
+Uma regra que precisa de privilégios e não os recebe é marcada como **não avaliada**, nunca
+como aprovada — uma verificação que não rodou não encontrou nada.
+
+Regras sobre roles olham apenas os roles que participam do banco analisado (dono ou
+beneficiário de algum GRANT). Roles são objetos do cluster inteiro, e apontar os roles da
+infraestrutura que hospeda o sandbox seria ruído que o leitor não pode corrigir.
+
 ## Consequências
 
 - **+** Testes unitários sem banco: fixtures de `AnalysisContext` → findings esperados (snapshot tests).

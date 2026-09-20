@@ -1,6 +1,6 @@
 import type { Node } from '@pgsql/types';
 import { err, ok, type Result } from '@sqlscope/core';
-import { hasSqlDetails, loadModule, parseSync } from 'libpg-query';
+import { fingerprintSync, hasSqlDetails, loadModule, parseSync } from 'libpg-query';
 import { classify, type Classification } from './classify.js';
 import { createPositionMap } from './positions.js';
 
@@ -67,4 +67,13 @@ function trim(sql: string, start: number, end: number) {
   while (start < end && /\s/.test(sql[start] ?? '')) start++;
   while (end > start && /\s/.test(sql[end - 1] ?? '')) end--;
   return { text: sql.slice(start, end), start, end };
+}
+
+/**
+ * Stable identity of the shape of a query: two statements differing only in literals or
+ * formatting share a fingerprint. Used to recognise the same query across runs — before
+ * and after an index, for instance.
+ */
+export function fingerprint(sql: string): string {
+  return fingerprintSync(sql);
 }

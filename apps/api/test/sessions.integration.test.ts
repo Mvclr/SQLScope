@@ -44,6 +44,7 @@ function browser() {
     run: async (sql: string): Promise<ScriptResult> =>
       (await send(agent.post('/sessions/current/execute')).send({ sql }).expect(200)).body,
     get: (path: string) => send(agent.get(path)),
+    post: (path: string, body: object) => send(agent.post(path)).send(body),
     delete: (path: string) => send(agent.delete(path)),
   };
 }
@@ -295,5 +296,184 @@ describe('rate limiting and notifications', () => {
       type: 'schema-changed',
       changes: [{ type: 'table-created', table: { name: 'notified' } }],
     });
+  });
+});
+
+describe('analysis', () => {
+  it('measures a query, then compares it with the run before the index', async () => {
+    const b = browser();
+    await b.start().expect(201);
+    await b.run(`create table orders (id int primary key, total numeric(10, 2))`);
+    await b.run(`insert into orders select g, (g % 997)::numeric from generate_series(1, 20000) g`);
+    await b.run('analyze orders');
+    const query = { sql: 'select * from orders where total = 42' };
+
+    const first = await b.post('/sessions/current/analyze', query).expect(200);
+    expect(first.body.previous).toBeNull();
+    expect(first.body.analysis).toMatchObject({
+      notMeasured: null,
+      access: ['Seq Scan em orders'],
+    });
+    expect(first.body.analysis.medianMs).toBeGreaterThan(0);
+    expect(first.body.analysis.insights.map((i: { id: string }) => i.id)).toContain(
+      'wasted-seq-scan',
+    );
+
+    await b.run('create index orders_total on orders (total)');
+    const second = await b.post('/sessions/current/analyze', query).expect(200);
+
+    expect(second.body.previous.access).toEqual(['Seq Scan em orders']);
+    expect(second.body.analysis.access.join(' ')).toMatch(/orders_total/);
+  });
+
+  it('explains without running anything that writes', async () => {
+    const b = browser();
+    await b.start().expect(201);
+    await b.run('create table t (id int); insert into t values (1), (2)');
+
+    const analysis = await b
+      .post('/sessions/current/analyze', { sql: 'delete from t' })
+      .expect(200);
+
+    expect(analysis.body.analysis).toMatchObject({ notMeasured: 'not-read-only', medianMs: null });
+    expect((await b.run('select count(*) from t')).statements[0]).toMatchObject({
+      output: { rows: [['2']] },
+    });
+  });
+
+  it('refuses to analyze a script with more than one statement', async () => {
+    const b = browser();
+    await b.start().expect(201);
+
+    await b.post('/sessions/current/analyze', { sql: 'select 1; select 2' }).expect(400);
+  });
+
+  it('reports security findings for the session database', async () => {
+    const b = browser();
+    await b.start().expect(201);
+    await b.run(`create table documents (id int, organization_id int, api_key text)`);
+
+    const report = await b.get('/sessions/current/report').expect(200);
+
+    const ids = report.body.findings.map((f: { ruleId: string }) => f.ruleId);
+    expect(ids).toEqual(expect.arrayContaining(['DB-SCHEMA-001', 'DB-SEC-001', 'DB-SEC-004']));
+    expect(report.body.counts.high).toBeGreaterThan(0);
+    // Privilege rules ran: the session role is not a superuser, so nothing is skipped.
+    expect(report.body.checks.every((c: { status: string }) => c.status !== 'skipped')).toBe(true);
+  });
+});
+
+describe('accounts', () => {
+  const credentials = (suffix: string) => ({
+    email: `person${suffix}@exemplo.com.br`,
+    password: 'uma senha longa o bastante',
+  });
+
+  it('registers, stays signed in, and refuses the e-mail a second time', async () => {
+    const b = browser();
+    const account = credentials('-a');
+
+    const created = await b.post('/auth/register', account).expect(201);
+    expect(created.body).toMatchObject({ email: account.email });
+    expect(created.headers['set-cookie']?.[0]).toMatch(/sqlscope_user=s%3A.+HttpOnly/);
+    await b.get('/auth/me').expect(200);
+
+    await browser().post('/auth/register', account).expect(409);
+  });
+
+  it('refuses a short password and never stores the password itself', async () => {
+    const b = browser();
+    await b.post('/auth/register', { email: 'curto@exemplo.com', password: 'curta' }).expect(400);
+
+    const account = credentials('-b');
+    await b.post('/auth/register', account).expect(201);
+    const prisma = app.get<PrismaClient>(PRISMA);
+    const stored = await prisma.user.findUniqueOrThrow({ where: { email: account.email } });
+    expect(stored.passwordHash).toMatch(/^\$argon2id\$/);
+    expect(stored.passwordHash).not.toContain(account.password);
+  });
+
+  it('answers the same way for a wrong password and an unknown e-mail', async () => {
+    const account = credentials('-c');
+    await browser().post('/auth/register', account).expect(201);
+
+    const wrongPassword = await browser()
+      .post('/auth/login', { ...account, password: 'outra senha qualquer' })
+      .expect(401);
+    const unknownEmail = await browser()
+      .post('/auth/login', { ...account, email: 'ninguem@exemplo.com' })
+      .expect(401);
+
+    expect(wrongPassword.body.message).toBe(unknownEmail.body.message);
+  });
+
+  it('claims the sandbox the browser was already using', async () => {
+    const b = browser();
+    const { body: session } = await b.start().expect(201);
+
+    await b.post('/auth/register', credentials('-d')).expect(201);
+
+    const prisma = app.get<PrismaClient>(PRISMA);
+    const claimed = await prisma.session.findUniqueOrThrow({ where: { id: session.id } });
+    expect(claimed.userId).not.toBeNull();
+  });
+
+  it('signs out', async () => {
+    const b = browser();
+    await b.post('/auth/register', credentials('-e')).expect(201);
+
+    await b.post('/auth/logout', {}).expect(204);
+
+    await b.get('/auth/me').expect(401);
+  });
+});
+
+describe('projects', () => {
+  const signedIn = async (suffix: string) => {
+    const b = browser();
+    await b
+      .post('/auth/register', {
+        email: `owner${suffix}@exemplo.com.br`,
+        password: 'uma senha longa o bastante',
+      })
+      .expect(201);
+    return b;
+  };
+
+  it('saves, lists, reopens and deletes a project', async () => {
+    const b = await signedIn('-1');
+    const scripts = ['create table a (id int)', 'create table b (id int)'];
+
+    const saved = await b.post('/projects', { name: 'Meu schema', scripts }).expect(201);
+
+    const listed = await b.get('/projects').expect(200);
+    expect(listed.body).toEqual([
+      expect.objectContaining({ id: saved.body.id, name: 'Meu schema' }),
+    ]);
+
+    const reopened = await b.get(`/projects/${saved.body.id}`).expect(200);
+    expect(reopened.body.scripts).toEqual(scripts);
+
+    await b.delete(`/projects/${saved.body.id}`).expect(204);
+    expect((await b.get('/projects').expect(200)).body).toEqual([]);
+  });
+
+  it('keeps projects private to their owner', async () => {
+    const owner = await signedIn('-2');
+    const stranger = await signedIn('-3');
+    const saved = await owner
+      .post('/projects', { name: 'Privado', scripts: ['select 1'] })
+      .expect(201);
+
+    await stranger.get(`/projects/${saved.body.id}`).expect(404);
+    await stranger.delete(`/projects/${saved.body.id}`).expect(404);
+    expect((await stranger.get('/projects').expect(200)).body).toEqual([]);
+  });
+
+  it('requires an account', async () => {
+    await browser().get('/projects').expect(401);
+    await browser()
+      .post('/projects', { name: 'x', scripts: ['select 1'] })
+      .expect(401);
   });
 });

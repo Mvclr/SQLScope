@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@sqlscope/core": "workspace:*",
+    "@sqlscope/explain": "workspace:*",
     "@sqlscope/sql-parser": "workspace:*"
   },
   "devDependencies": {

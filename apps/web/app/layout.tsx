@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { AccountNav } from '../components/auth/AccountNav';
 import { NavLink } from '../components/ui/NavLink';
 import './globals.css';
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               Secure <span className="text-[11px]">· em breve</span>
             </span>
           </nav>
+          <AccountNav />
         </header>
         <main className="min-h-0 flex-1">{children}</main>
       </body>

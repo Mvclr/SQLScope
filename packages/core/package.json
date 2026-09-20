@@ -16,6 +16,10 @@
     "./pg": {
       "types": "./dist/adapters/pg.d.ts",
       "default": "./dist/adapters/pg.js"
+    },
+    "./export": {
+      "types": "./dist/export/index.d.ts",
+      "default": "./dist/export/index.js"
     }
   },
   "files": [

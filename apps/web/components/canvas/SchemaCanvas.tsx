@@ -14,6 +14,7 @@ import '@xyflow/react/dist/base.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspace } from '../workspace/context';
 import type { Highlights, Point } from '../workspace/store';
+import { ExportMenu } from './ExportMenu';
 import { ForeignKeyEdge, type ForeignKeyEdgeType } from './ForeignKeyEdge';
 import { layoutAll, placeNewTables } from './layout';
 import { TableNode, type TableNodeType } from './TableNode';
@@ -83,7 +84,10 @@ function toEdges(snapshot: SchemaSnapshot, highlights: Highlights): ForeignKeyEd
 }
 
 function Canvas() {
-  const snapshot = useWorkspace((s) => s.snapshot);
+  const current = useWorkspace((s) => s.snapshot);
+  const viewing = useWorkspace((s) => s.viewing);
+  // Time travel shows a past schema; the live one is what the database holds now.
+  const snapshot = viewing?.snapshot ?? current;
   const positions = useWorkspace((s) => s.positions);
   const highlights = useWorkspace((s) => s.highlights);
   const setPositions = useWorkspace((s) => s.setPositions);
@@ -150,6 +154,7 @@ function Canvas() {
 
   return (
     <div className="relative h-full w-full">
+      <TimeTravelBanner />
       <ReactFlow
         key={layoutVersion}
         fitView
@@ -168,13 +173,16 @@ function Canvas() {
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--border)" />
         <Controls showInteractive={false} />
       </ReactFlow>
-      <button
-        type="button"
-        onClick={relayout}
-        className="absolute right-3 top-3 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[12px] text-muted hover:bg-surface-3 hover:text-text"
-      >
-        Reorganizar
-      </button>
+      <div className="absolute right-3 top-3 flex gap-2">
+        <button
+          type="button"
+          onClick={relayout}
+          className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[12px] text-muted hover:bg-surface-3 hover:text-text"
+        >
+          Reorganizar
+        </button>
+        <ExportMenu />
+      </div>
       <SchemaAnnouncer />
     </div>
   );
@@ -221,6 +229,21 @@ function SchemaAnnouncer() {
     <p aria-live="polite" className="sr-only">
       {text}
     </p>
+  );
+}
+
+function TimeTravelBanner() {
+  const viewing = useWorkspace((s) => s.viewing);
+  const timeTravelTo = useWorkspace((s) => s.timeTravelTo);
+  if (!viewing) return null;
+
+  return (
+    <div className="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-md border border-sev-warning/40 bg-sev-warning/10 px-2.5 py-1 text-[12px] text-sev-warning">
+      <span>Vendo o schema de {new Date(viewing.at).toLocaleTimeString('pt-BR')}</span>
+      <button type="button" onClick={() => timeTravelTo(null)} className="underline">
+        voltar ao atual
+      </button>
+    </div>
   );
 }
 

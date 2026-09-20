@@ -1,4 +1,11 @@
 export {
+  analyzeQuery,
+  type AnalysisError,
+  type AnalyzeOptions,
+  type QueryAnalysis,
+} from './analyze.js';
+export { compareAnalyses, type Comparison, type Measured } from './display.js';
+export {
   runScript,
   type ExecutedStatement,
   type FailedStatement,

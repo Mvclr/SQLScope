@@ -1,7 +1,19 @@
 import type { SchemaChange, SchemaSnapshot, TableRef } from '@sqlscope/core';
 import type { ScriptResult } from '@sqlscope/engine';
+import type { Report } from '@sqlscope/security-rules';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { BackendError, type WorkspaceBackend } from './backend';
+import { BackendError, type QueryAnalysisResult, type WorkspaceBackend } from './backend';
+
+/** Something fetched on demand: a query analysis, a security report. */
+export interface Loadable<T> {
+  readonly status: 'idle' | 'loading' | 'ready' | 'error';
+  readonly data: T | null;
+  readonly error: string | null;
+  /** The database changed after this was produced. */
+  readonly stale: boolean;
+}
+
+const idle = <T>(): Loadable<T> => ({ status: 'idle', data: null, error: null, stale: false });
 
 export interface Point {
   x: number;
@@ -44,7 +56,19 @@ export interface WorkspaceState {
   selectedStatement: number;
   highlights: Highlights;
   positions: Record<string, Point>;
+  analysis: Loadable<QueryAnalysisResult>;
+  report: Loadable<Report>;
+  /** A past moment being looked at, instead of the current schema. */
+  viewing: {
+    readonly runId: number;
+    readonly at: number;
+    readonly snapshot: SchemaSnapshot;
+  } | null;
 
+  /** Shows the schema as it was right after a run; `null` goes back to the present. */
+  timeTravelTo(runId: number | null): void;
+  analyzeQuery(sql?: string): Promise<void>;
+  buildReport(): Promise<void>;
   /** A view starts using the workspace: open it, or keep it open if it was just released. */
   attach(): void;
   /** A view stops using it. Closing is deferred, so an immediate re-attach reuses the database. */
@@ -92,7 +116,23 @@ export function createWorkspaceStore(
       set((state) => ({
         snapshot,
         highlights: highlightsFor(changes, snapshot, state.highlights.stamp + 1),
+        // A schema change can invalidate both: say so instead of showing old answers.
+        report: { ...state.report, stale: state.report.data !== null },
+        analysis: { ...state.analysis, stale: state.analysis.data !== null },
       }));
+
+    /** Runs one on-demand request, keeping its slice honest about what it holds. */
+    const load = async <T>(
+      key: 'analysis' | 'report',
+      request: () => Promise<T>,
+    ): Promise<void> => {
+      set({ [key]: { status: 'loading', data: get()[key].data, error: null, stale: false } });
+      try {
+        set({ [key]: { status: 'ready', data: await request(), error: null, stale: false } });
+      } catch (error) {
+        set({ [key]: { ...get()[key], status: 'error', error: describe(error) } });
+      }
+    };
 
     return {
       tier: backend.tier,
@@ -106,6 +146,34 @@ export function createWorkspaceStore(
       selectedStatement: 0,
       highlights: noHighlights,
       positions: {},
+      analysis: idle(),
+      report: idle(),
+      viewing: null,
+
+      timeTravelTo(runId) {
+        if (runId === null) return set({ viewing: null });
+        const runs = get().runs;
+        const index = runs.findIndex((run) => run.id === runId);
+        if (index < 0) return;
+        // The schema of that moment is the last one captured up to that run.
+        const snapshot = runs
+          .slice(0, index + 1)
+          .reverse()
+          .find((run) => run.result.schema)?.result.schema?.snapshot;
+        set({ viewing: { runId, at: runs[index]!.at, snapshot: snapshot ?? { tables: [] } } });
+      },
+
+      async analyzeQuery(sql) {
+        const target = (sql ?? get().sql).trim();
+        if (target === '' || get().status !== 'ready') return;
+        await load('analysis', () => backend.analyze(target));
+      },
+
+      buildReport() {
+        return get().status === 'ready'
+          ? load('report', () => backend.report())
+          : Promise.resolve();
+      },
 
       attach() {
         clearTimeout(pendingClose);
@@ -153,7 +221,14 @@ export function createWorkspaceStore(
 
       async reset() {
         await get().close();
-        set({ runs: [], selectedRun: null, selectedStatement: 0, notice: null });
+        set({
+          runs: [],
+          selectedRun: null,
+          selectedStatement: 0,
+          notice: null,
+          analysis: idle(),
+          report: idle(),
+        });
         await get().open();
       },
 
@@ -167,6 +242,8 @@ export function createWorkspaceStore(
           const run: RunRecord = { id: nextRunId++, at: Date.now(), sql, result };
           set((s) => ({
             status: 'ready',
+            // Running something brings the user back to the present.
+            viewing: null,
             runs: [...s.runs, run],
             selectedRun: run.id,
             selectedStatement: defaultStatement(result),

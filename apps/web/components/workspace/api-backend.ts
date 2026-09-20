@@ -1,6 +1,12 @@
 import type { SchemaSnapshot } from '@sqlscope/core';
 import type { ScriptResult } from '@sqlscope/engine';
-import { BackendError, type SessionNotice, type WorkspaceBackend } from './backend';
+import type { Report } from '@sqlscope/security-rules';
+import {
+  BackendError,
+  type QueryAnalysisResult,
+  type SessionNotice,
+  type WorkspaceBackend,
+} from './backend';
 
 export interface SessionInfo {
   id: string;
@@ -48,6 +54,17 @@ export function apiBackend(onSession?: (info: SessionInfo) => void): WorkspaceBa
         body: JSON.stringify({ sql }),
       });
     },
+    analyze(sql) {
+      return call<QueryAnalysisResult>('/sessions/current/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ sql }),
+      });
+    },
+
+    report() {
+      return call<Report>('/sessions/current/report');
+    },
+
     subscribe(listener) {
       events ??= new EventSource('/api/sessions/current/events');
       const types: SessionNotice['type'][] = [

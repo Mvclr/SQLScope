@@ -18,6 +18,34 @@ enum SessionStatus {
   FAILED
 }
 
+/// Someone who signed up, so their work survives the sandbox.
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  /// argon2id hash. The password itself never reaches the database.
+  passwordHash String    @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  projects     Project[]
+  sessions     Session[]
+
+  @@map("users")
+}
+
+/// A saved session: the statements that build a schema, replayable into a new sandbox.
+model Project {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  /// SQL scripts in the order they were run.
+  scripts   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@map("projects")
+}
+
 /// One disposable T1 sandbox: a database and a role on the sandbox cluster (ADR 0001).
 model Session {
   id           String        @id @default(uuid()) @db.Uuid
@@ -32,10 +60,14 @@ model Session {
   lastActiveAt DateTime      @default(now()) @map("last_active_at")
   endedAt      DateTime?     @map("ended_at")
   endReason    String?       @map("end_reason")
+  /// Set when the browser was signed in; an anonymous session is claimed on login.
+  userId       String?       @map("user_id") @db.Uuid
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   events       SessionEvent[]
 
   @@index([status, lastActiveAt])
   @@index([clientHash, status])
+  @@index([userId])
   @@map("sessions")
 }
 

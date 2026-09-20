@@ -1,10 +1,10 @@
 import type { SchemaSnapshot } from '@sqlscope/core';
-import type { ScriptResult } from '@sqlscope/engine';
+import type { QueryAnalysis, ScriptResult } from '@sqlscope/engine';
 import type { Prisma, PrismaClient } from '../generated/prisma/client.js';
 
 /** Event types of the session log (ADR 0004). */
 export type SessionEventType =
-  'StatementExecuted' | 'StatementFailed' | 'SchemaChanged' | 'SnapshotTaken';
+  'StatementExecuted' | 'StatementFailed' | 'SchemaChanged' | 'SnapshotTaken' | 'QueryAnalyzed';
 
 export interface HistoryEntry {
   readonly seq: number;
@@ -62,6 +62,24 @@ export class SessionLog {
     await this.append(sessionId, [{ type: 'SnapshotTaken', payload: { snapshot } }]);
   }
 
+  /** Keeps a measurement, so a later run of the same query can be compared with it. */
+  async recordAnalysis(sessionId: string, analysis: QueryAnalysis): Promise<void> {
+    await this.append(sessionId, [{ type: 'QueryAnalyzed', payload: analysis }]);
+  }
+
+  /** The most recent measurement of a query shape in this session, if there is one. */
+  async lastAnalysis(sessionId: string, fingerprint: string): Promise<QueryAnalysis | null> {
+    const event = await this.prisma.sessionEvent.findFirst({
+      where: {
+        sessionId,
+        type: 'QueryAnalyzed',
+        payload: { path: ['fingerprint'], equals: fingerprint },
+      },
+      orderBy: { seq: 'desc' },
+    });
+    return (event?.payload as QueryAnalysis | undefined) ?? null;
+  }
+
   async latestSnapshot(sessionId: string): Promise<SchemaSnapshot | null> {
     const event = await this.prisma.sessionEvent.findFirst({
       where: { sessionId, type: 'SnapshotTaken' },
@@ -73,7 +91,8 @@ export class SessionLog {
   /** Statements and schema changes, oldest first. Checkpoints are an internal detail. */
   async history(sessionId: string, limit = 500): Promise<HistoryEntry[]> {
     const events = await this.prisma.sessionEvent.findMany({
-      where: { sessionId, type: { not: 'SnapshotTaken' } },
+      // Checkpoints and measurements are internal: the history lists what the user ran.
+      where: { sessionId, type: { notIn: ['SnapshotTaken', 'QueryAnalyzed'] } },
       orderBy: { seq: 'desc' },
       take: limit,
     });

@@ -5,6 +5,8 @@ import { SchemaCanvas } from '../canvas/SchemaCanvas';
 import { SplitPane } from '../ui/SplitPane';
 import { useWorkspace, WorkspaceProvider } from './context';
 import { HistoryPanel } from './HistoryPanel';
+import { PlanPanel } from './PlanPanel';
+import { ReportPanel } from './ReportPanel';
 import { ResultsPanel } from './ResultsPanel';
 import { SqlEditor, type EditorMarker } from './SqlEditor';
 import type { WorkspaceStore } from './store';
@@ -45,6 +47,8 @@ function Layout({ aboveEditor, actions, openingLabel }: Omit<WorkspaceProps, 'st
 
   const tabs: WorkspaceTab[] = [
     { id: 'results', label: 'Resultados', content: <ResultsPanel /> },
+    { id: 'plan', label: 'Plano', content: <PlanPanel /> },
+    { id: 'report', label: 'Análise', content: <ReportPanel /> },
     { id: 'history', label: 'Histórico', content: <HistoryPanel /> },
   ];
 

@@ -1,0 +1,29 @@
+{
+  "name": "@sqlscope/security-rules",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deterministic checks over a schema snapshot and its privileges.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sqlscope/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "vitest": "5.0.1"
+  }
+}
