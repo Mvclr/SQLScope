@@ -2,6 +2,7 @@
 
 import Editor, { loader, type BeforeMount, type OnMount } from '@monaco-editor/react';
 import { useEffect, useRef } from 'react';
+import { editorPalette } from '../../lib/editor-theme';
 import { useWorkspace } from './context';
 
 // Served from our own origin (scripts/copy-monaco.mjs), never a CDN.
@@ -16,25 +17,35 @@ export interface EditorMarker {
   readonly message: string;
 }
 
+const THEME = 'sqlscope';
+
 const defineThemes: BeforeMount = (monaco) => {
   const css = getComputedStyle(document.documentElement);
-  const token = (name: string) => css.getPropertyValue(name).trim().replace('#', '');
-  const light = window.matchMedia('(prefers-color-scheme: light)').matches;
-  monaco.editor.defineTheme('sqlscope', {
-    base: light ? 'vs' : 'vs-dark',
-    inherit: true,
-    rules: [
-      { token: 'keyword', foreground: token('--structure'), fontStyle: 'bold' },
-      { token: 'string', foreground: token('--sev-warning') },
-      { token: 'number', foreground: token('--accent') },
-      { token: 'comment', foreground: token('--text-faint'), fontStyle: 'italic' },
-    ],
-    colors: {
-      'editor.background': `#${token('--surface-1')}`,
-      'editor.lineHighlightBackground': `#${token('--surface-2')}`,
-      'editorLineNumber.foreground': `#${token('--text-faint')}`,
-    },
-  });
+  const dark = !window.matchMedia('(prefers-color-scheme: light)').matches;
+  const palette = editorPalette((token) => css.getPropertyValue(token), dark);
+
+  try {
+    monaco.editor.defineTheme(THEME, {
+      base: dark ? 'vs-dark' : 'vs',
+      inherit: true,
+      rules: [
+        { token: 'keyword', foreground: palette.keyword, fontStyle: 'bold' },
+        { token: 'string', foreground: palette.string },
+        { token: 'number', foreground: palette.number },
+        { token: 'comment', foreground: palette.comment, fontStyle: 'italic' },
+      ],
+      colors: {
+        'editor.background': `#${palette.background}`,
+        'editor.lineHighlightBackground': `#${palette.lineHighlight}`,
+        'editorLineNumber.foreground': `#${palette.lineNumber}`,
+      },
+    });
+  } catch (error) {
+    // Colours are already validated; if Monaco still refuses them, an editor with the
+    // stock theme is far better than no editor at all.
+    console.warn('SQLScope: falling back to the default editor theme', error);
+    monaco.editor.defineTheme(THEME, { base: dark ? 'vs-dark' : 'vs', inherit: true, rules: [] });
+  }
 };
 
 export function SqlEditor({ markers }: { markers: readonly EditorMarker[] }) {
@@ -95,7 +106,7 @@ export function SqlEditor({ markers }: { markers: readonly EditorMarker[] }) {
   return (
     <Editor
       language="sql"
-      theme="sqlscope"
+      theme={THEME}
       value={sql}
       onChange={(value) => setSql(value ?? '')}
       beforeMount={defineThemes}

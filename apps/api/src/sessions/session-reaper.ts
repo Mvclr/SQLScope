@@ -28,6 +28,8 @@ export class SessionReaper implements OnApplicationBootstrap, OnApplicationShutd
   private sweeping: Promise<void> | undefined;
   /** Sessions already warned, keyed to the activity time the warning was about. */
   private readonly warned = new Map<string, number>();
+  private lastFailure: string | null = null;
+  private repeatedFailures = 0;
 
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
@@ -51,9 +53,25 @@ export class SessionReaper implements OnApplicationBootstrap, OnApplicationShutd
   /** One pass. Never overlaps itself; errors are logged, the next pass retries. */
   sweep(): Promise<void> {
     this.sweeping ??= this.pass()
-      .catch((error: Error) => this.logger.error(`sweep failed: ${error.message}`))
+      .catch((error: Error) => this.reportFailure(error))
       .finally(() => (this.sweeping = undefined));
     return this.sweeping;
+  }
+
+  /**
+   * A sweep that fails usually keeps failing for the same reason — the control database
+   * is down, say — every 30 seconds. Say it once, with one line, and then only every
+   * tenth time, so the log stays readable while the cause is fixed.
+   */
+  private reportFailure(error: Error): void {
+    // Prisma errors carry the whole query and a diagram; the first line is the reason.
+    const reason = error.message.split('\n')[0]!.trim();
+    this.repeatedFailures = reason === this.lastFailure ? this.repeatedFailures + 1 : 0;
+    this.lastFailure = reason;
+    if (this.repeatedFailures === 0) this.logger.error(`sweep failed: ${reason}`);
+    else if (this.repeatedFailures % 10 === 0) {
+      this.logger.error(`sweep still failing (${this.repeatedFailures + 1}×): ${reason}`);
+    }
   }
 
   private async pass(): Promise<void> {

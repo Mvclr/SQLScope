@@ -7,7 +7,7 @@
   "scripts": {
     "generate": "prisma generate",
     "build": "tsc -p tsconfig.build.json",
-    "dev": "nest start --watch --exec \"node --env-file-if-exists=.env\"",
+    "dev": "prisma migrate deploy && nest start --watch --exec \"node --env-file-if-exists=.env\"",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

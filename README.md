@@ -36,6 +36,10 @@ cp apps/api/.env.example apps/api/.env
 pnpm dev
 ```
 
+`pnpm dev` aplica as migrations do banco de controle antes de subir a API, então um clone
+novo já sobe pronto. Se o `postgres-control` não estiver de pé, o comando falha aí mesmo,
+com a mensagem do Prisma, em vez de a API subir e errar a cada varredura do reaper.
+
 | Comando                 | O que faz                                                         |
 | ----------------------- | ----------------------------------------------------------------- |
 | `pnpm test`             | Testes unitários (inclui o contrato de engine rodando no PGlite)  |
