@@ -1,5 +1,5 @@
 import type { SchemaChange, SchemaSnapshot } from '@sqlscope/core';
-import type { QueryAnalysis, ScriptResult } from '@sqlscope/engine';
+import type { Measurement, QueryAnalysis, ScriptResult } from '@sqlscope/engine';
 import type { Report } from '@sqlscope/security-rules';
 
 /** Pushed by the API over SSE. Mirrors apps/api/src/events/session-event-bus.ts. */
@@ -15,7 +15,7 @@ export type SessionNotice =
 export interface QueryAnalysisResult {
   readonly analysis: QueryAnalysis;
   /** Last measurement of the same query shape, to compare against. */
-  readonly previous: QueryAnalysis | null;
+  readonly previous: Measurement | null;
 }
 
 export interface WorkspaceBackend {

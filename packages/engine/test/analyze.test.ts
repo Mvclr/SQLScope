@@ -2,7 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import type { SqlSession } from '@sqlscope/core';
 import { pgliteSession } from '@sqlscope/core/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { analyzeQuery, compareAnalyses, type QueryAnalysis } from '../src/index.js';
+import { analyzeQuery, compareAnalyses, toMeasurement, type QueryAnalysis } from '../src/index.js';
 
 const SLOW_QUERY = 'select * from orders where total = 42';
 
@@ -113,6 +113,24 @@ describe('compareAnalyses', () => {
       expect(comparison.significant).toBe(significant);
     },
   );
+
+  it('keeps a measurement without the plan, so storing one stays cheap', async () => {
+    const analysis = await analyze(SLOW_QUERY, 1);
+
+    const measurement = toMeasurement(analysis, 12);
+
+    // Everything the comparison reads, and nothing else: the plan is the large part.
+    expect(measurement).toEqual({
+      sql: analysis.sql.slice(0, 12),
+      fingerprint: analysis.fingerprint,
+      at: analysis.at,
+      samples: analysis.samples,
+      medianMs: analysis.medianMs,
+      rows: analysis.rows,
+      access: analysis.access,
+    });
+    expect(compareAnalyses(measurement, analysis).speedup).toBe(1);
+  });
 
   it('has nothing to compare when one side was only estimated', async () => {
     const measured = await analyze(SLOW_QUERY, 1);

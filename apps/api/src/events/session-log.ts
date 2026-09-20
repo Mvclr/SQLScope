@@ -1,5 +1,10 @@
 import type { SchemaSnapshot } from '@sqlscope/core';
-import type { QueryAnalysis, ScriptResult } from '@sqlscope/engine';
+import {
+  toMeasurement,
+  type Measurement,
+  type QueryAnalysis,
+  type ScriptResult,
+} from '@sqlscope/engine';
 import type { Prisma, PrismaClient } from '../generated/prisma/client.js';
 
 /** Event types of the session log (ADR 0004). */
@@ -62,13 +67,20 @@ export class SessionLog {
     await this.append(sessionId, [{ type: 'SnapshotTaken', payload: { snapshot } }]);
   }
 
-  /** Keeps a measurement, so a later run of the same query can be compared with it. */
+  /**
+   * Keeps a measurement, so a later run of the same query can be compared with it.
+   *
+   * Only the measurement: the plan tree is the large part of an analysis, the comparison
+   * never reads it, and this is the control database — the one place where user input
+   * must not be able to grow without a bound.
+   */
   async recordAnalysis(sessionId: string, analysis: QueryAnalysis): Promise<void> {
-    await this.append(sessionId, [{ type: 'QueryAnalyzed', payload: analysis }]);
+    const payload = toMeasurement(analysis, MAX_LOGGED_SQL);
+    await this.append(sessionId, [{ type: 'QueryAnalyzed', payload }]);
   }
 
   /** The most recent measurement of a query shape in this session, if there is one. */
-  async lastAnalysis(sessionId: string, fingerprint: string): Promise<QueryAnalysis | null> {
+  async lastAnalysis(sessionId: string, fingerprint: string): Promise<Measurement | null> {
     const event = await this.prisma.sessionEvent.findFirst({
       where: {
         sessionId,
@@ -77,7 +89,7 @@ export class SessionLog {
       },
       orderBy: { seq: 'desc' },
     });
-    return (event?.payload as QueryAnalysis | undefined) ?? null;
+    return (event?.payload as Measurement | undefined) ?? null;
   }
 
   async latestSnapshot(sessionId: string): Promise<SchemaSnapshot | null> {

@@ -1,6 +1,6 @@
 'use client';
 
-import type { QueryAnalysis } from '@sqlscope/engine';
+import type { Measurement, QueryAnalysis } from '@sqlscope/engine';
 import { compareAnalyses } from '@sqlscope/engine/display';
 import type { PlanNode } from '@sqlscope/explain';
 import { SeverityTag } from '../ui/Severity';
@@ -80,7 +80,7 @@ export function PlanPanel() {
 }
 
 /** Before and after — the point of creating an index (docs/DESIGN.md: green means faster). */
-function Comparison({ before, after }: { before: QueryAnalysis; after: QueryAnalysis }) {
+function Comparison({ before, after }: { before: Measurement; after: QueryAnalysis }) {
   const { speedup, significant, accessChanged } = compareAnalyses(before, after);
   // Two runs of a few microseconds differ by chance; only a real difference is claimed.
   const faster = significant && speedup !== null && speedup > 1;

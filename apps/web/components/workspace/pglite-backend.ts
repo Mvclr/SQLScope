@@ -1,11 +1,14 @@
 import type { PGliteInterface } from '@electric-sql/pglite';
 import { introspect, readPrivileges, type SchemaSnapshot } from '@sqlscope/core';
 import { pgliteSession } from '@sqlscope/core/pglite';
-import type { QueryAnalysis } from '@sqlscope/engine';
+import type { Measurement } from '@sqlscope/engine';
 import { BackendError, type WorkspaceBackend } from './backend';
 
 /** Generous: in T0 the only machine at risk is the user's own. */
 const limits = { maxRows: 5_000, maxBytes: 5_000_000 };
+
+/** Matches the API's own cap on logged SQL (apps/api/src/events/session-log.ts). */
+const MAX_REMEMBERED_SQL = 10_000;
 
 export interface DatabaseSetup {
   readonly schema: string;
@@ -23,7 +26,8 @@ export function pgliteBackend(setup?: DatabaseSetup): WorkspaceBackend {
   let db: PGliteInterface | undefined;
   let snapshot: SchemaSnapshot = { tables: [] };
   // Measurements taken in this workspace, so a query can be compared with its own last run.
-  const measured = new Map<string, QueryAnalysis>();
+  // Kept as narrow as the server keeps them, so both tiers hand the UI the same thing.
+  const measured = new Map<string, Measurement>();
 
   const session = () => {
     if (!db) throw new Error('Database is not open');
@@ -52,11 +56,11 @@ export function pgliteBackend(setup?: DatabaseSetup): WorkspaceBackend {
     },
 
     async analyze(sql) {
-      const { analyzeQuery } = await import('@sqlscope/engine');
+      const { analyzeQuery, toMeasurement } = await import('@sqlscope/engine');
       const result = await analyzeQuery(session(), sql, { runs: 3 });
       if (!result.ok) throw new BackendError(describeAnalysisError(result.error), 'unavailable');
       const previous = measured.get(result.value.fingerprint) ?? null;
-      measured.set(result.value.fingerprint, result.value);
+      measured.set(result.value.fingerprint, toMeasurement(result.value, MAX_REMEMBERED_SQL));
       return { analysis: result.value, previous };
     },
 

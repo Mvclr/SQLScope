@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { introspect, readPrivileges } from '@sqlscope/core';
-import { analyzeQuery, type QueryAnalysis } from '@sqlscope/engine';
+import { analyzeQuery, type Measurement, type QueryAnalysis } from '@sqlscope/engine';
 import { analyze, type Report } from '@sqlscope/security-rules';
 import { CONFIG, type Config } from '../config.js';
 import { SessionLog } from '../events/session-log.js';
@@ -11,7 +11,7 @@ import { SessionService } from '../sessions/session.service.js';
 export interface AnalysisWithHistory {
   readonly analysis: QueryAnalysis;
   /** Last measurement of the same query shape, when there is one to compare against. */
-  readonly previous: QueryAnalysis | null;
+  readonly previous: Measurement | null;
 }
 
 @Injectable()

@@ -3,22 +3,50 @@ import { parsePlan, planInsights, walk, type PlanInsight, type QueryPlan } from 
 import { fingerprint, loadParser, parseScript } from '@sqlscope/sql-parser';
 import { asDatabaseError } from '@sqlscope/core';
 
-export interface QueryAnalysis {
+/**
+ * What is worth keeping about a measurement once its plan has been shown.
+ *
+ * Comparing a query with its own last run needs the timing and the access path, not the
+ * plan tree — and the plan is the big part. Keeping them apart lets whoever stores these
+ * store the small one: see `toMeasurement`.
+ */
+export interface Measurement {
   readonly sql: string;
   /** Identity of the query shape, so runs of "the same query" can be compared. */
   readonly fingerprint: string;
   readonly at: string;
-  readonly plan: QueryPlan;
-  readonly insights: readonly PlanInsight[];
   /** Server-reported execution time of each measured run, oldest first. */
   readonly samples: readonly number[];
   /** Median of `samples`; `null` when the query was only estimated. */
   readonly medianMs: number | null;
-  /** Set when the plan is an estimate rather than a measurement. */
-  readonly notMeasured: 'not-read-only' | null;
   readonly rows: number | null;
   /** How the data was reached: `Seq Scan em orders`, `Index Scan em orders_total on orders`. */
   readonly access: readonly string[];
+}
+
+export interface QueryAnalysis extends Measurement {
+  readonly plan: QueryPlan;
+  readonly insights: readonly PlanInsight[];
+  /** Set when the plan is an estimate rather than a measurement. */
+  readonly notMeasured: 'not-read-only' | null;
+}
+
+/**
+ * Strips an analysis down to what a later comparison needs.
+ *
+ * `maxSql` bounds the one field the user controls the size of: a measurement may be kept
+ * for as long as its session lives, and the SQL is there to be read, not replayed.
+ */
+export function toMeasurement(analysis: QueryAnalysis, maxSql: number): Measurement {
+  return {
+    sql: analysis.sql.slice(0, maxSql),
+    fingerprint: analysis.fingerprint,
+    at: analysis.at,
+    samples: analysis.samples,
+    medianMs: analysis.medianMs,
+    rows: analysis.rows,
+    access: analysis.access,
+  };
 }
 
 export type AnalysisError =
