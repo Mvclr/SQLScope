@@ -49,6 +49,13 @@ receber um relatório de segurança do próprio banco.
 - **Lab SQL Injection** com AST lado a lado (vulnerável × parametrizada) e mini-app HTTP vulnerável.
 - **Lab Roles & Permissions** com matriz de privilégios viva e "executar como".
 - **Lab Row-Level Security** multi-tenant.
+- **Export completo do schema**: políticas RLS, views, sequences, tipos, funções e triggers.
+  Hoje o export cobre tabelas, constraints e índices, e reporta o RLS em comentário em vez
+  de ligá-lo sem as políticas (que vivem fora do `SchemaSnapshot`). Entra junto do lab de
+  RLS, quando as políticas ganharem lugar no snapshot e no diff.
+- **Link compartilhado com prévia**: hoje ele reexecuta o SQL assim que a página abre. O
+  banco é o PGlite de quem abriu, mas é SQL de estranho rodando sem pergunta; mostrar o
+  script e pedir confirmação é a decisão pendente.
 
 ## Fase 4 — v1.0: Transações e concorrência
 
