@@ -101,7 +101,8 @@ export function compareAnalyses(before: Measured, after: Measured): Comparison {
     speedup,
     deltaMs: measurable ? round(after.medianMs! - before.medianMs!) : null,
     accessChanged,
-    // A different access path is evidence on its own; timings alone need to clear the floor.
+    // A changed access path explains a difference that is too small to clear the floor;
+    // with no difference in time at all, there is still nothing to claim.
     significant: changed && (aboveNoise || accessChanged),
   };
 }

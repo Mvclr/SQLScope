@@ -19,8 +19,11 @@ export class AuthService {
   /**
    * A real hash of a value nobody knows. Verifying against it costs the same as verifying
    * a genuine one, so an unknown e-mail takes as long to reject as a wrong password.
+   *
+   * The failure is swallowed on purpose: nobody is awaiting this promise yet, and an
+   * unhandled rejection here would take the process down long before anyone logs in.
    */
-  private readonly decoyHash = hash(randomBytes(32).toString('hex'), ARGON2);
+  private readonly decoyHash = hash(randomBytes(32).toString('hex'), ARGON2).catch(() => null);
 
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
@@ -43,7 +46,11 @@ export class AuthService {
   async signIn(email: string, password: string): Promise<Result<User, SignInRefusal>> {
     const user = await this.prisma.user.findUnique({ where: { email: normalizeEmail(email) } });
     const against = user?.passwordHash ?? (await this.decoyHash);
-    const matches = await verify(against, password).catch(() => false);
+    let matches = false;
+    if (against) matches = await verify(against, password).catch(() => false);
+    // No decoy to verify against: hash the attempt and discard it, so an unknown e-mail
+    // still does not come back faster than a wrong password.
+    else await hash(password, ARGON2);
     return user && matches ? ok(user) : err('invalid-credentials');
   }
 

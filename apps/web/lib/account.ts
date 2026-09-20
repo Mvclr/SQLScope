@@ -33,22 +33,41 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-/** `null` when nobody is signed in; the 401 is an answer, not a failure. */
-export async function currentAccount(): Promise<Account | null> {
-  try {
-    return await call<Account>('/auth/me');
-  } catch {
-    return null;
-  }
+/**
+ * Who is signed in, or `null` for nobody.
+ *
+ * Shared between callers: several components ask on the same page load, and React mounts
+ * them twice in development. They all wait on one request until something changes it.
+ */
+let pending: Promise<Account | null> | undefined;
+
+export function currentAccount(): Promise<Account | null> {
+  pending ??= call<{ user: Account | null }>('/auth/me')
+    .then((body) => body.user)
+    // A server that cannot answer is not an answer of "signed out", but there is nothing
+    // else the page can do with it, and the next action will surface the real error.
+    .catch(() => null);
+  return pending;
 }
 
+/** After signing in or out, the shared answer is stale. */
+const forget = <T>(value: T): T => {
+  pending = undefined;
+  return value;
+};
+
 export const register = (email: string, password: string) =>
-  call<Account>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) });
+  call<Account>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  }).then(forget);
 
 export const login = (email: string, password: string) =>
-  call<Account>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+  call<Account>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }).then(
+    forget,
+  );
 
-export const logout = () => call<void>('/auth/logout', { method: 'POST' });
+export const logout = () => call<void>('/auth/logout', { method: 'POST' }).then(forget);
 
 export const listProjects = () => call<ProjectSummary[]>('/projects');
 

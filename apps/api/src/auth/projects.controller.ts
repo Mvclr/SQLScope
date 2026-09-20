@@ -63,19 +63,30 @@ export class ProjectsController {
     if (!parsed.success) throw new BadRequestException(z.prettifyError(parsed.error));
 
     const userId = userOf(request).id;
-    if ((await this.prisma.project.count({ where: { userId } })) >= MAX_PROJECTS) {
-      throw new BadRequestException({
-        message: `Você já tem ${MAX_PROJECTS} projetos salvos. Apague algum para salvar outro.`,
-      });
-    }
-    return this.prisma.project.create({
-      data: {
-        userId,
-        name: parsed.data.name,
-        scripts: parsed.data.scripts as Prisma.InputJsonValue,
-      },
-      select: { id: true, name: true, createdAt: true, updatedAt: true },
-    });
+    const { name, scripts } = parsed.data;
+
+    // Counting and inserting in one serialisable transaction: two tabs saving at the same
+    // moment would both read 49 and both insert, and the limit would not be one.
+    const save = () =>
+      this.prisma.$transaction(
+        async (tx) => {
+          if ((await tx.project.count({ where: { userId } })) >= MAX_PROJECTS) {
+            throw new BadRequestException({
+              message: `Você já tem ${MAX_PROJECTS} projetos salvos. Apague algum para salvar outro.`,
+            });
+          }
+          return tx.project.create({
+            data: { userId, name, scripts: scripts as Prisma.InputJsonValue },
+            select: { id: true, name: true, createdAt: true, updatedAt: true },
+          });
+        },
+        { isolationLevel: 'Serializable' },
+      );
+
+    // PostgreSQL aborts one of two conflicting transactions; the loser simply goes again.
+    return save().catch((error: unknown) =>
+      isWriteConflict(error) ? save() : Promise.reject(error),
+    );
   }
 
   @Delete(':id')
@@ -86,4 +97,15 @@ export class ProjectsController {
     });
     if (count === 0) throw new NotFoundException({ message: 'Projeto não encontrado.' });
   }
+}
+
+/**
+ * A transaction PostgreSQL rolled back because another one touched the same rows
+ * (`40001`/`40P01`, which Prisma reports as `P2034`). Nothing was written, so running it
+ * again is safe and is what the server should do instead of blaming the user.
+ */
+function isWriteConflict(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const code = (error as { code?: unknown }).code;
+  return code === 'P2034' || code === '40001' || code === '40P01';
 }

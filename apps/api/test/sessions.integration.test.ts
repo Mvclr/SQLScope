@@ -376,7 +376,8 @@ describe('accounts', () => {
     const created = await b.post('/auth/register', account).expect(201);
     expect(created.body).toMatchObject({ email: account.email });
     expect(created.headers['set-cookie']?.[0]).toMatch(/sqlscope_user=s%3A.+HttpOnly/);
-    await b.get('/auth/me').expect(200);
+    const me = await b.get('/auth/me').expect(200);
+    expect(me.body).toEqual({ user: { id: expect.any(String), email: account.email } });
 
     await browser().post('/auth/register', account).expect(409);
   });
@@ -424,7 +425,10 @@ describe('accounts', () => {
 
     await b.post('/auth/logout', {}).expect(204);
 
-    await b.get('/auth/me').expect(401);
+    // Being nobody is an answer: only the routes that need an account refuse one.
+    const me = await b.get('/auth/me').expect(200);
+    expect(me.body).toEqual({ user: null });
+    await b.get('/projects').expect(401);
   });
 });
 

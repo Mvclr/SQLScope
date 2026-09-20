@@ -19,7 +19,7 @@ import { CONFIG, type Config } from '../config.js';
 import { RateLimit, RateLimitGuard } from '../rate-limit/rate-limit.guard.js';
 import { sessionIdFromCookie } from '../sessions/session.guard.js';
 import { AuthService } from './auth.service.js';
-import { USER_COOKIE, UserGuard, userOf } from './user.guard.js';
+import { USER_COOKIE, userIdFromCookie } from './user.guard.js';
 
 const Credentials = z.object({
   email: z.email().max(320),
@@ -77,11 +77,15 @@ export class AuthController {
     response.clearCookie(USER_COOKIE, this.cookieOptions());
   }
 
+  /**
+   * Who the browser is, if anybody. Not guarded: "nobody is signed in" is the answer to
+   * this question, not a failure to answer it, and every visitor asks it once.
+   */
   @Get('me')
-  @UseGuards(UserGuard)
-  me(@Req() request: Request) {
-    const user = userOf(request);
-    return { id: user.id, email: user.email };
+  async me(@Req() request: Request) {
+    const id = userIdFromCookie(request);
+    const user = id ? await this.auth.findById(id) : null;
+    return { user: user && { id: user.id, email: user.email } };
   }
 
   private parse(body: unknown) {
