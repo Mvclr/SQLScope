@@ -29,6 +29,11 @@
     "generate": {
       "outputs": ["src/generated/**"]
     },
+    "@sqlscope/api#dev": {
+      "dependsOn": ["^build", "generate"],
+      "cache": false,
+      "persistent": true
+    },
     "@sqlscope/api#build": {
       "dependsOn": ["^build", "generate"]
     },
