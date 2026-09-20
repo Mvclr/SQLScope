@@ -8,13 +8,20 @@ import { useWorkspace } from '../workspace/context';
 const PNG_WIDTH = 1600;
 const PNG_HEIGHT = 1000;
 
+/** Long enough for any browser to have started reading the blob. */
+const REVOKE_AFTER_MS = 30_000;
+
 function download(name: string, content: BlobPart, type: string): void {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a');
   link.href = url;
   link.download = name;
+  // Some browsers ignore a click on a link that is not in the document, and revoking the
+  // URL in the same tick can cancel the download that click just started.
+  document.body.append(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_AFTER_MS);
 }
 
 /** Takes the schema out of SQLScope: as SQL, as a diagram file, or as a picture. */

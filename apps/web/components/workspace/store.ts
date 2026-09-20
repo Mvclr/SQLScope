@@ -110,6 +110,8 @@ export function createWorkspaceStore(
   // detach only closes if no attach follows shortly.
   let attached = false;
   let pendingClose: ReturnType<typeof setTimeout> | undefined;
+  // Ticket of the newest request of each kind; older answers are dropped (see `load`).
+  const latest = { analysis: 0, report: 0 };
 
   return createStore<WorkspaceState>()((set, get) => {
     const applySchema = (snapshot: SchemaSnapshot, changes: readonly SchemaChange[]) =>
@@ -121,15 +123,25 @@ export function createWorkspaceStore(
         analysis: { ...state.analysis, stale: state.analysis.data !== null },
       }));
 
-    /** Runs one on-demand request, keeping its slice honest about what it holds. */
+    /**
+     * Runs one on-demand request, keeping its slice honest about what it holds.
+     *
+     * Only the newest request of each kind may write: analysing, editing the SQL and
+     * analysing again leaves two in flight, and the slower one would otherwise land last
+     * and show the plan of a query that is no longer on screen.
+     */
     const load = async <T>(
       key: 'analysis' | 'report',
       request: () => Promise<T>,
     ): Promise<void> => {
+      const ticket = (latest[key] += 1);
       set({ [key]: { status: 'loading', data: get()[key].data, error: null, stale: false } });
       try {
-        set({ [key]: { status: 'ready', data: await request(), error: null, stale: false } });
+        const data = await request();
+        if (ticket !== latest[key]) return;
+        set({ [key]: { status: 'ready', data, error: null, stale: false } });
       } catch (error) {
+        if (ticket !== latest[key]) return;
         set({ [key]: { ...get()[key], status: 'error', error: describe(error) } });
       }
     };
@@ -228,6 +240,8 @@ export function createWorkspaceStore(
           notice: null,
           analysis: idle(),
           report: idle(),
+          // The runs it pointed at are gone, and so is the database they described.
+          viewing: null,
         });
         await get().open();
       },

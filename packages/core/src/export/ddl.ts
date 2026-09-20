@@ -106,6 +106,13 @@ const qualify = (schema: string, name: string) =>
     : `${quoteIdentifier(schema)}.${quoteIdentifier(name)}`;
 
 /**
+ * Says what the file holds, because what it leaves out matters: a reader who reimports
+ * this and finds no views should know it was never there to begin with.
+ */
+const HEADER = `-- Export do SQLScope: tabelas, constraints e índices.
+-- Não incluído: políticas RLS, views, sequences, tipos, funções e triggers.`;
+
+/**
  * Rebuilds the SQL that creates a schema.
  *
  * Tables come first, then constraints, then indexes: foreign keys may point in any
@@ -118,6 +125,7 @@ export function toDdl(snapshot: SchemaSnapshot): string {
     .sort(compareText);
 
   const parts = [
+    HEADER,
     ...schemas.map((schema) => `create schema ${quoteIdentifier(schema)};`),
     ...snapshot.tables.map(createTable),
     // Keys and checks first: a foreign key needs the unique constraint it points at to
@@ -159,10 +167,21 @@ function createIndexes(table: TableSnapshot): string[] {
   return table.indexes.filter((index) => !index.constraint).map((index) => `${index.definition};`);
 }
 
+/**
+ * Row-level security is reported, not reproduced.
+ *
+ * The policies live outside the snapshot (`readPrivileges`), so this export cannot carry
+ * them — and `enable row level security` without its policies turns a table into one that
+ * returns nothing to anybody but its owner. Losing the setting is bad; silently producing
+ * an empty table is worse, so the export says what it saw and leaves the choice to whoever
+ * reads it.
+ */
 function rowSecurity(table: TableSnapshot): string[] {
-  const statements: string[] = [];
+  if (!table.rowSecurity.enabled && !table.rowSecurity.forced) return [];
   const name = qualify(table.schema, table.name);
-  if (table.rowSecurity.enabled) statements.push(`alter table ${name} enable row level security;`);
-  if (table.rowSecurity.forced) statements.push(`alter table ${name} force row level security;`);
-  return statements;
+  const mode = table.rowSecurity.forced ? 'ativo e forçado' : 'ativo';
+  return [
+    `-- ${name}: row level security ${mode} no banco de origem.\n` +
+      `-- As políticas não são exportadas; veja-as no relatório de segurança do SQLScope.`,
+  ];
 }

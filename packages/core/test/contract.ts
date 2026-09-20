@@ -466,7 +466,19 @@ export function describeEngineContract(
 
       const rebuilt = await open(...splitStatements(toDdl(source)));
 
-      expect(withoutIds(await introspect(rebuilt))).toEqual(withoutIds(source));
+      // Row-level security is the one thing deliberately left behind: the policies that
+      // make it usable are not in the snapshot, so the export reports it instead.
+      expect(withoutRowSecurity(withoutIds(await introspect(rebuilt)))).toEqual(
+        withoutRowSecurity(withoutIds(source)),
+      );
+    });
+
+    it('reports row level security instead of enabling it without its policies', async () => {
+      const ddl = toDdl(await introspect(await open(...schema)));
+
+      expect(ddl).not.toContain('enable row level security');
+      expect(ddl).toContain('-- orders: row level security ativo e forçado no banco de origem.');
+      expect(ddl).toContain('-- Não incluído: políticas RLS');
     });
 
     it('describes tables, keys and relationships in DBML', async () => {
@@ -514,7 +526,9 @@ const splitStatements = (ddl: string) =>
   ddl
     .split(/\n\s*\n/)
     .map((statement) => statement.trim())
-    .filter((statement) => statement !== '');
+    // The export also carries comment-only blocks: what it covers, and the tables whose
+    // row-level security it could not bring along. There is nothing to execute in those.
+    .filter((statement) => statement !== '' && !/^\s*--/.test(statement));
 
 /** Catalog ids differ between two databases holding the same schema. */
 function withoutIds(snapshot: { tables: readonly TableSnapshot[] }) {
@@ -525,3 +539,7 @@ function withoutIds(snapshot: { tables: readonly TableSnapshot[] }) {
     indexes: table.indexes.map((i) => ({ ...i, id: undefined })),
   }));
 }
+
+/** The DDL export reports row-level security rather than reproducing it (see `toDdl`). */
+const withoutRowSecurity = <T extends { rowSecurity: unknown }>(tables: T[]) =>
+  tables.map((table) => ({ ...table, rowSecurity: undefined }));
