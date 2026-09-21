@@ -76,8 +76,8 @@ select id, numero, validade from cartoes;`,
       id: 'parametro',
       title: 'Com parâmetro, o formato é seu',
       brief:
-        'A mesma busca, com o valor fora do texto da consulta. O banco recebe a consulta e o valor por caminhos separados.',
-      sql: "prepare busca (text) as select id, nome, email from usuarios where email = $1;\nexecute busca (''' or ''1''=''1');",
+        'A mesma busca, com o valor fora do texto da consulta. O banco recebe a consulta e o valor por caminhos separados. O prepare fica guardado na sessão, por isso o passo começa descartando o de uma execução anterior.',
+      sql: "deallocate all;\nprepare busca (text) as select id, nome, email from usuarios where email = $1;\nexecute busca (''' or ''1''=''1');",
       expect:
         'Zero linhas — e nenhum erro. O parâmetro virou um ParamRef na árvore: o que o usuário digita vai para dentro do nó, nunca vira um nó.',
       rows: 0,

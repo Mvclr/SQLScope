@@ -42,8 +42,10 @@ export const rolesAndPermissions: Lab = {
       id: 'criar',
       title: 'Duas roles, nenhum privilégio',
       brief:
-        'Uma role nasce sem acesso a nada que não seja seu. NOLOGIN porque estas existem para agrupar permissões, não para conectar.',
-      sql: `create role app_leitura nologin;
+        'Uma role nasce sem acesso a nada que não seja seu. NOLOGIN porque estas existem para agrupar permissões, não para conectar. CREATE ROLE não tem IF NOT EXISTS; o DROP antes deixa o passo seguro para rodar de novo.',
+      sql: `reset role;
+drop role if exists app_leitura, app_escrita;
+create role app_leitura nologin;
 create role app_escrita nologin;`,
       expect:
         'As roles aparecem na matriz sem nenhuma marca. Criar uma role não dá acesso a nada — o acesso vem dos GRANTs.',

@@ -14,26 +14,32 @@ const limits = { maxRows: 100, maxBytes: 1_000_000 };
  * trusted — a lab whose SQL drifted would be worse than no lab at all.
  */
 describe.each(labs)('$title', (lab) => {
-  it('runs every step, and is refused exactly where it says it will be', async () => {
+  it('runs every step twice, and is refused exactly where it says it will be', async () => {
     const db = await PGlite.create();
     const session = pgliteSession(db);
     try {
       expect(failureOf(await runScript(session, lab.setup, { limits, previous: null }))).toBeNull();
 
       for (const step of lab.steps) {
-        const result = await runScript(session, step.sql, { limits, previous: null });
-        expect(result.syntaxError, `${step.id}: ${result.syntaxError?.message ?? ''}`).toBeNull();
+        // Twice, with the same outcome both times. The lab invites running a step again —
+        // a second press of Run, or "troque para globex e rode de novo" — and the database
+        // keeps what the first run created, so a step that only works once breaks the lab.
+        for (const run of ['1st run', '2nd run']) {
+          const where = `${step.id} (${run})`;
+          const result = await runScript(session, step.sql, { limits, previous: null });
+          expect(result.syntaxError, `${where}: ${result.syntaxError?.message ?? ''}`).toBeNull();
 
-        const failure = failureOf(result);
-        if (step.refused === undefined) {
-          expect(failure, `${step.id} should have run clean`).toBeNull();
-          if (step.rows !== undefined) {
-            expect(rowsOf(result), `${step.id} should end in ${step.rows} rows`).toBe(step.rows);
+          const failure = failureOf(result);
+          if (step.refused === undefined) {
+            expect(failure, `${where} should have run clean`).toBeNull();
+            if (step.rows !== undefined) {
+              expect(rowsOf(result), `${where} should end in ${step.rows} rows`).toBe(step.rows);
+            }
+          } else {
+            expect(failure?.code, `${where}: ${failure?.message ?? 'nothing failed'}`).toBe(
+              step.refused,
+            );
           }
-        } else {
-          expect(failure?.code, `${step.id}: ${failure?.message ?? 'nothing failed'}`).toBe(
-            step.refused,
-          );
         }
       }
     } finally {

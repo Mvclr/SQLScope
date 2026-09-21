@@ -66,6 +66,7 @@ select id, tenant, titulo from documentos order by id;`,
       brief:
         'A política compara a coluna com uma variável da sessão. Quem conecta declara o tenant uma vez; o banco aplica em toda consulta.',
       sql: `reset role;
+drop policy if exists documentos_do_tenant on documentos;
 create policy documentos_do_tenant on documentos
   for all to app_tenant
   using (tenant = current_setting('app.tenant', true))
