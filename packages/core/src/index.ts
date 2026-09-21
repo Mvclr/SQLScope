@@ -17,6 +17,5 @@ export {
   type DatabasePrivileges,
   type Grant,
   type RoleSummary,
-  type RowPolicy,
 } from './introspection/privileges.js';
 export { diffSnapshots, type ColumnAttribute, type SchemaChange } from './diff.js';

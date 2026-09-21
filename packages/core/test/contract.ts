@@ -361,14 +361,13 @@ export function describeEngineContract(
       current = undefined;
     });
 
-    it('reads no explicit grants and no policies in a fresh database', async () => {
+    it('reads no explicit grants in a fresh database', async () => {
       const db = await fresh();
 
       const privileges = await readPrivileges(db);
 
       expect(privileges.currentRole).not.toBe('');
       expect(privileges.tableGrants).toEqual([]);
-      expect(privileges.policies).toEqual([]);
     });
 
     it('reads grants to a role and to PUBLIC', async () => {
@@ -402,7 +401,7 @@ export function describeEngineContract(
       }
     });
 
-    it('reads row-level policies with their expressions', async () => {
+    it('reads row-level policies into the table they protect', async () => {
       const db = await fresh(
         `create table documents (id int, organization_id int)`,
         `alter table documents enable row level security`,
@@ -410,17 +409,17 @@ export function describeEngineContract(
            using (organization_id = current_setting('app.org', true)::int)`,
       );
 
-      const { policies } = await readPrivileges(db);
+      // Policies belong to the schema, so they arrive with the table, not with the grants.
+      const { policies } = table(await introspect(db), 'public', 'documents');
 
       expect(policies).toEqual([
         expect.objectContaining({
-          table: 'documents',
           name: 'tenant_isolation',
-          command: 'SELECT',
+          command: 'select',
           permissive: true,
-          roles: ['PUBLIC'],
+          roles: ['public'],
           using: expect.stringContaining('organization_id') as unknown as string,
-          withCheck: null,
+          check: null,
         }),
       ]);
     });
@@ -459,6 +458,9 @@ export function describeEngineContract(
       `create table reporting.daily (day date primary key, revenue numeric(12, 2))`,
       `alter table orders enable row level security`,
       `alter table orders force row level security`,
+      `create policy orders_do_tenant on orders for select
+         using (organization_id = current_setting('app.org', true)::int)`,
+      `create policy orders_sem_apagar on orders as restrictive for delete using (false)`,
     ];
 
     it('rebuilds an equivalent schema from the DDL it generates', async () => {
@@ -466,19 +468,18 @@ export function describeEngineContract(
 
       const rebuilt = await open(...splitStatements(toDdl(source)));
 
-      // Row-level security is the one thing deliberately left behind: the policies that
-      // make it usable are not in the snapshot, so the export reports it instead.
-      expect(withoutRowSecurity(withoutIds(await introspect(rebuilt)))).toEqual(
-        withoutRowSecurity(withoutIds(source)),
-      );
+      expect(withoutIds(await introspect(rebuilt))).toEqual(withoutIds(source));
     });
 
-    it('reports row level security instead of enabling it without its policies', async () => {
+    it('carries row level security with the policies that make it usable', async () => {
       const ddl = toDdl(await introspect(await open(...schema)));
 
-      expect(ddl).not.toContain('enable row level security');
-      expect(ddl).toContain('-- orders: row level security ativo e forçado no banco de origem.');
-      expect(ddl).toContain('-- Não incluído: políticas RLS');
+      // Enabling row security without its policies would export a table that answers
+      // nothing — a different database from the one that was read.
+      expect(ddl).toContain('alter table orders enable row level security;');
+      expect(ddl).toContain('create policy orders_do_tenant on orders\n  for select\n  using (');
+      expect(ddl).toContain('as restrictive');
+      expect(ddl).toContain('-- Não incluído: views, sequences, tipos, funções e triggers.');
     });
 
     it('describes tables, keys and relationships in DBML', async () => {
@@ -537,9 +538,6 @@ function withoutIds(snapshot: { tables: readonly TableSnapshot[] }) {
     id: undefined,
     constraints: table.constraints.map((c) => ({ ...c, id: undefined })),
     indexes: table.indexes.map((i) => ({ ...i, id: undefined })),
+    policies: table.policies.map((p) => ({ ...p, id: undefined })),
   }));
 }
-
-/** The DDL export reports row-level security rather than reproducing it (see `toDdl`). */
-const withoutRowSecurity = <T extends { rowSecurity: unknown }>(tables: T[]) =>
-  tables.map((table) => ({ ...table, rowSecurity: undefined }));

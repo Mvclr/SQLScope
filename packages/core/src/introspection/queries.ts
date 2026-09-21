@@ -159,3 +159,35 @@ export const indexesQuery = `
     on con.conindid = i.indexrelid
    and con.conrelid = i.indrelid
    and con.contype in ('p', 'u', 'x')`;
+
+export interface PolicyRow extends Record<string, unknown> {
+  id: string;
+  table_id: string;
+  name: string;
+  permissive: boolean;
+  command: string;
+  roles: string[];
+  using_expression: string | null;
+  check_expression: string | null;
+}
+
+/**
+ * Row-level policies. They are part of the schema, not of the data: which rows a role may
+ * see is decided here, so a snapshot without them would describe a table it cannot explain.
+ */
+export const policiesQuery = `
+  with ${userTables}
+  select p.oid::text as id,
+         p.polrelid::text as table_id,
+         p.polname as name,
+         p.polpermissive as permissive,
+         case p.polcmd when 'r' then 'select' when 'a' then 'insert' when 'w' then 'update'
+                       when 'd' then 'delete' else 'all' end as command,
+         -- An empty role list means the policy applies to every role.
+         array(
+           select r.rolname from pg_catalog.pg_roles r where r.oid = any(p.polroles)
+         )::text[] as roles,
+         pg_catalog.pg_get_expr(p.polqual, p.polrelid, true) as using_expression,
+         pg_catalog.pg_get_expr(p.polwithcheck, p.polrelid, true) as check_expression
+  from user_tables t
+  join pg_catalog.pg_policy p on p.polrelid = t.oid`;

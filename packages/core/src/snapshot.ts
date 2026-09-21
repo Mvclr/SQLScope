@@ -21,6 +21,7 @@ export interface TableSnapshot extends TableRef {
   readonly constraints: readonly ConstraintSnapshot[];
   readonly indexes: readonly IndexSnapshot[];
   readonly rowSecurity: RowSecurity;
+  readonly policies: readonly PolicySnapshot[];
 }
 
 export interface ColumnSnapshot {
@@ -92,6 +93,27 @@ export interface IndexSnapshot {
 export interface RowSecurity {
   readonly enabled: boolean;
   readonly forced: boolean;
+}
+
+export type PolicyCommand = 'all' | 'select' | 'insert' | 'update' | 'delete';
+
+/**
+ * A row-level policy: which rows a role may read (`using`) and which it may write
+ * (`check`). Part of the schema, and the part that decides what a table answers.
+ */
+export interface PolicySnapshot {
+  /** `pg_policy` oid. Survives renames. */
+  readonly id: string;
+  readonly name: string;
+  readonly command: PolicyCommand;
+  /** `false` for a RESTRICTIVE policy, which narrows instead of widening. */
+  readonly permissive: boolean;
+  /** `PUBLIC` when the policy names no role, meaning every role. */
+  readonly roles: readonly string[];
+  /** Expression deciding which existing rows are visible; `null` for none. */
+  readonly using: string | null;
+  /** Expression every written row must satisfy; `null` for none. */
+  readonly check: string | null;
 }
 
 export const qualifiedName = (table: TableRef): string => `${table.schema}.${table.name}`;

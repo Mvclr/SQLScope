@@ -13,6 +13,7 @@ const table = (name: string): SchemaSnapshot['tables'][number] => ({
   constraints: [],
   indexes: [],
   rowSecurity: { enabled: false, forced: false },
+  policies: [],
 });
 
 const scriptResult = (snapshot: SchemaSnapshot | null): ScriptResult => ({

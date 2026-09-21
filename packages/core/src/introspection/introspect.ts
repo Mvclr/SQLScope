@@ -4,6 +4,8 @@ import {
   type ColumnSnapshot,
   type ConstraintSnapshot,
   type IndexSnapshot,
+  type PolicyCommand,
+  type PolicySnapshot,
   type ReferentialAction,
   type SchemaSnapshot,
   type TableSnapshot,
@@ -12,10 +14,12 @@ import {
   columnsQuery,
   constraintsQuery,
   indexesQuery,
+  policiesQuery,
   tablesQuery,
   type ColumnRow,
   type ConstraintRow,
   type IndexRow,
+  type PolicyRow,
   type TableRow,
 } from './queries.js';
 
@@ -32,10 +36,12 @@ export async function introspect(db: SqlExecutor): Promise<SchemaSnapshot> {
   const columns = (await db.query<ColumnRow>(columnsQuery)).rows;
   const constraints = (await db.query<ConstraintRow>(constraintsQuery)).rows;
   const indexes = (await db.query<IndexRow>(indexesQuery)).rows;
+  const policies = (await db.query<PolicyRow>(policiesQuery)).rows;
 
   const columnsByTable = groupBy(columns, (row) => row.table_id);
   const constraintsByTable = groupBy(constraints, (row) => row.table_id);
   const indexesByTable = groupBy(indexes, (row) => row.table_id);
+  const policiesByTable = groupBy(policies, (row) => row.table_id);
 
   const snapshots = tables.map((table): TableSnapshot => ({
     id: table.id,
@@ -51,6 +57,9 @@ export async function introspect(db: SqlExecutor): Promise<SchemaSnapshot> {
       .map(toIndex)
       .sort((a, b) => compareText(a.name, b.name)),
     rowSecurity: { enabled: table.rls_enabled, forced: table.rls_forced },
+    policies: (policiesByTable.get(table.id) ?? [])
+      .map(toPolicy)
+      .sort((a, b) => compareText(a.name, b.name)),
   }));
 
   snapshots.sort((a, b) => compareText(a.schema, b.schema) || compareText(a.name, b.name));
@@ -123,6 +132,19 @@ function toIndex(row: IndexRow): IndexSnapshot {
     predicate: row.predicate,
     definition: row.definition,
     constraint: row.constraint_name,
+  };
+}
+
+function toPolicy(row: PolicyRow): PolicySnapshot {
+  return {
+    id: row.id,
+    name: row.name,
+    command: row.command as PolicyCommand,
+    permissive: row.permissive,
+    // No role named means every role, which PostgreSQL itself prints as PUBLIC.
+    roles: row.roles.length > 0 ? [...row.roles].sort(compareText) : ['public'],
+    using: row.using_expression,
+    check: row.check_expression,
   };
 }
 

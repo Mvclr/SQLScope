@@ -3,6 +3,7 @@ import {
   type ColumnSnapshot,
   type ConstraintSnapshot,
   type IndexSnapshot,
+  type PolicySnapshot,
   type RowSecurity,
   type SchemaSnapshot,
   type TableRef,
@@ -63,6 +64,14 @@ export type SchemaChange =
       readonly table: TableRef;
       readonly before: RowSecurity;
       readonly after: RowSecurity;
+    }
+  | { readonly type: 'policy-created'; readonly table: TableRef; readonly policy: PolicySnapshot }
+  | { readonly type: 'policy-dropped'; readonly table: TableRef; readonly policy: PolicySnapshot }
+  | {
+      readonly type: 'policy-changed';
+      readonly table: TableRef;
+      readonly before: PolicySnapshot;
+      readonly after: PolicySnapshot;
     };
 
 /**
@@ -115,12 +124,14 @@ function diffTable(before: TableSnapshot, after: TableSnapshot): SchemaChange[] 
   const indexes = matchById(standalone(before.indexes), standalone(after.indexes));
   const constraints = matchById(before.constraints, after.constraints);
   const columns = matchBy(before.columns, after.columns, (c) => c.position);
+  const policies = matchById(before.policies, after.policies);
 
   for (const index of indexes.removed) changes.push({ type: 'index-dropped', table, index });
   for (const constraint of constraints.removed) {
     changes.push({ type: 'constraint-dropped', table, constraint });
   }
   for (const column of columns.removed) changes.push({ type: 'column-dropped', table, column });
+  for (const policy of policies.removed) changes.push({ type: 'policy-dropped', table, policy });
 
   for (const [b, a] of columns.kept) {
     if (b.name !== a.name)
@@ -159,6 +170,22 @@ function diffTable(before: TableSnapshot, after: TableSnapshot): SchemaChange[] 
       after: after.rowSecurity,
     });
   }
+
+  // After the flag: turning row security on and writing the first policy is one thought,
+  // and reads in that order.
+  for (const [b, a] of policies.kept) {
+    if (
+      b.name !== a.name ||
+      b.command !== a.command ||
+      b.permissive !== a.permissive ||
+      b.using !== a.using ||
+      b.check !== a.check ||
+      b.roles.join(',') !== a.roles.join(',')
+    ) {
+      changes.push({ type: 'policy-changed', table, before: b, after: a });
+    }
+  }
+  for (const policy of policies.added) changes.push({ type: 'policy-created', table, policy });
 
   return changes;
 }

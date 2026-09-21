@@ -11,7 +11,6 @@ export interface DatabasePrivileges {
   /** Explicit grants only; a table with no `relacl` is reachable by its owner alone. */
   readonly tableGrants: readonly Grant[];
   readonly schemaGrants: readonly Grant[];
-  readonly policies: readonly RowPolicy[];
 }
 
 export interface RoleSummary {
@@ -35,18 +34,6 @@ export interface Grant {
   readonly privilege: string;
 }
 
-export interface RowPolicy {
-  readonly schema: string;
-  readonly table: string;
-  readonly name: string;
-  readonly permissive: boolean;
-  /** `ALL`, `SELECT`, `INSERT`, `UPDATE`, `DELETE`. */
-  readonly command: string;
-  readonly roles: readonly string[];
-  readonly using: string | null;
-  readonly withCheck: string | null;
-}
-
 const userSchemas = `n.nspname not in ('pg_catalog', 'information_schema')
   and n.nspname not like 'pg\\_toast%' and n.nspname not like 'pg\\_temp%'`;
 
@@ -68,18 +55,12 @@ interface GrantRow extends Record<string, unknown> {
   privilege: string;
 }
 
-interface PolicyRow extends Record<string, unknown> {
-  schema: string;
-  table: string;
-  name: string;
-  permissive: boolean;
-  command: string;
-  roles: string[];
-  using: string | null;
-  with_check: string | null;
-}
-
-/** Reads the privileges and row-level policies of the current database. */
+/**
+ * Reads who may do what in the current database.
+ *
+ * Row-level policies are not here: they belong to the tables they protect, and
+ * `introspect` reads them into the snapshot.
+ */
 export async function readPrivileges(db: SqlExecutor): Promise<DatabasePrivileges> {
   const current = await db.query<{ role: string }>('select current_user as role');
 
@@ -124,21 +105,6 @@ export async function readPrivileges(db: SqlExecutor): Promise<DatabasePrivilege
     left join pg_catalog.pg_roles g on g.oid = a.grantee
     where n.nspacl is not null and ${userSchemas}`);
 
-  const policies = await db.query<PolicyRow>(`
-    select n.nspname as schema,
-           c.relname as table,
-           p.polname as name,
-           p.polpermissive as permissive,
-           case p.polcmd when 'r' then 'SELECT' when 'a' then 'INSERT' when 'w' then 'UPDATE'
-                         when 'd' then 'DELETE' else 'ALL' end as command,
-           array(select rolname from pg_catalog.pg_roles where oid = any(p.polroles))::text[] as roles,
-           pg_catalog.pg_get_expr(p.polqual, p.polrelid, true) as using,
-           pg_catalog.pg_get_expr(p.polwithcheck, p.polrelid, true) as with_check
-    from pg_catalog.pg_policy p
-    join pg_catalog.pg_class c on c.oid = p.polrelid
-    join pg_catalog.pg_namespace n on n.oid = c.relnamespace
-    where ${userSchemas}`);
-
   return {
     currentRole: current.rows[0]?.role ?? '',
     roles: roles.rows
@@ -154,24 +120,6 @@ export async function readPrivileges(db: SqlExecutor): Promise<DatabasePrivilege
       .sort((a, b) => compareText(a.name, b.name)),
     tableGrants: toGrants(tableGrants.rows),
     schemaGrants: toGrants(schemaGrants.rows),
-    policies: policies.rows
-      .map((row): RowPolicy => ({
-        schema: row.schema,
-        table: row.table,
-        name: row.name,
-        permissive: row.permissive,
-        command: row.command,
-        // An empty role list means the policy applies to everyone.
-        roles: row.roles.length > 0 ? [...row.roles].sort(compareText) : ['PUBLIC'],
-        using: row.using,
-        withCheck: row.with_check,
-      }))
-      .sort(
-        (a, b) =>
-          compareText(a.schema, b.schema) ||
-          compareText(a.table, b.table) ||
-          compareText(a.name, b.name),
-      ),
   };
 }
 

@@ -118,14 +118,11 @@ const rlsWithoutPolicy: SecurityRule = {
   category: 'isolation',
   recommendation:
     'Com RLS ativo e nenhuma política, a tabela fica invisível para todos, menos para o dono — o que costuma aparecer como "a consulta não retorna nada" em produção.',
-  needsPrivileges: true,
-  check: ({ snapshot, privileges }) =>
+  // The policies are part of the snapshot, so this answers without reading privileges.
+  needsPrivileges: false,
+  check: ({ snapshot }) =>
     snapshot.tables
-      .filter(
-        (table) =>
-          table.rowSecurity.enabled &&
-          !privileges!.policies.some((p) => p.schema === table.schema && p.table === table.name),
-      )
+      .filter((table) => table.rowSecurity.enabled && table.policies.length === 0)
       .map((table) =>
         finding(
           rlsWithoutPolicy,

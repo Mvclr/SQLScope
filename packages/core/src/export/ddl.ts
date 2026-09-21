@@ -1,4 +1,4 @@
-import type { ColumnSnapshot, SchemaSnapshot, TableSnapshot } from '../snapshot.js';
+import type { ColumnSnapshot, PolicySnapshot, SchemaSnapshot, TableSnapshot } from '../snapshot.js';
 import { compareText } from '../snapshot.js';
 
 /** Quotes an identifier only when PostgreSQL would need it. */
@@ -109,8 +109,8 @@ const qualify = (schema: string, name: string) =>
  * Says what the file holds, because what it leaves out matters: a reader who reimports
  * this and finds no views should know it was never there to begin with.
  */
-const HEADER = `-- Export do SQLScope: tabelas, constraints e índices.
--- Não incluído: políticas RLS, views, sequences, tipos, funções e triggers.`;
+const HEADER = `-- Export do SQLScope: tabelas, constraints, índices e políticas RLS.
+-- Não incluído: views, sequences, tipos, funções e triggers.`;
 
 /**
  * Rebuilds the SQL that creates a schema.
@@ -168,20 +168,30 @@ function createIndexes(table: TableSnapshot): string[] {
 }
 
 /**
- * Row-level security is reported, not reproduced.
+ * Row-level security: the flags and then the policies that make them usable.
  *
- * The policies live outside the snapshot (`readPrivileges`), so this export cannot carry
- * them — and `enable row level security` without its policies turns a table into one that
- * returns nothing to anybody but its owner. Losing the setting is bad; silently producing
- * an empty table is worse, so the export says what it saw and leaves the choice to whoever
- * reads it.
+ * Both or neither. Enabling row security without its policies produces a table that
+ * answers nothing to anybody but its owner, which would be a quiet way of exporting a
+ * different database from the one that was read.
  */
 function rowSecurity(table: TableSnapshot): string[] {
-  if (!table.rowSecurity.enabled && !table.rowSecurity.forced) return [];
   const name = qualify(table.schema, table.name);
-  const mode = table.rowSecurity.forced ? 'ativo e forçado' : 'ativo';
-  return [
-    `-- ${name}: row level security ${mode} no banco de origem.\n` +
-      `-- As políticas não são exportadas; veja-as no relatório de segurança do SQLScope.`,
-  ];
+  const statements: string[] = [];
+  if (table.rowSecurity.enabled) statements.push(`alter table ${name} enable row level security;`);
+  if (table.rowSecurity.forced) statements.push(`alter table ${name} force row level security;`);
+  return [...statements, ...table.policies.map((policy) => createPolicy(name, policy))];
+}
+
+function createPolicy(table: string, policy: PolicySnapshot): string {
+  const parts = [`create policy ${quoteIdentifier(policy.name)} on ${table}`];
+  if (!policy.permissive) parts.push('  as restrictive');
+  if (policy.command !== 'all') parts.push(`  for ${policy.command}`);
+  // `public` is the default, and naming it would still be true — but PostgreSQL prints
+  // policies without it, and a diff of two exports should not show noise.
+  if (policy.roles.join(',') !== 'public') {
+    parts.push(`  to ${policy.roles.map(quoteIdentifier).join(', ')}`);
+  }
+  if (policy.using !== null) parts.push(`  using (${policy.using})`);
+  if (policy.check !== null) parts.push(`  with check (${policy.check})`);
+  return `${parts.join('\n')};`;
 }

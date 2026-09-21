@@ -38,6 +38,7 @@ const table = (id: string, name: string, over: Partial<TableSnapshot> = {}): Tab
   columns: [column(1, 'id')],
   constraints: [],
   indexes: [],
+  policies: [],
   rowSecurity: { enabled: false, forced: false },
   ...over,
 });
