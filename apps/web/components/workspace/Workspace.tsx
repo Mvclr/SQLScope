@@ -11,7 +11,7 @@ import { ResultsPanel } from './ResultsPanel';
 import { SqlEditor, type EditorMarker } from './SqlEditor';
 import type { WorkspaceStore } from './store';
 
-interface WorkspaceTab {
+export interface WorkspaceTab {
   readonly id: string;
   readonly label: string;
   readonly content: ReactNode;
@@ -23,6 +23,8 @@ interface WorkspaceProps {
   aboveEditor?: ReactNode;
   /** Controls shown in the toolbar after the Run button. */
   actions?: ReactNode;
+  /** Panels a mode adds to the bottom tabs, before the built-in ones (labs use this). */
+  extraTabs?: readonly WorkspaceTab[];
   /** What is being prepared while the database opens. */
   openingLabel: string;
 }
@@ -40,12 +42,13 @@ export function Workspace({ store, ...props }: WorkspaceProps) {
   );
 }
 
-function Layout({ aboveEditor, actions, openingLabel }: Omit<WorkspaceProps, 'store'>) {
+function Layout({ aboveEditor, actions, extraTabs, openingLabel }: Omit<WorkspaceProps, 'store'>) {
   const status = useWorkspace((s) => s.status);
   const problem = useWorkspace((s) => s.problem);
   const reset = useWorkspace((s) => s.reset);
 
   const tabs: WorkspaceTab[] = [
+    ...(extraTabs ?? []),
     { id: 'results', label: 'Resultados', content: <ResultsPanel /> },
     { id: 'plan', label: 'Plano', content: <PlanPanel /> },
     { id: 'report', label: 'Análise', content: <ReportPanel /> },
@@ -158,10 +161,11 @@ function BottomTabs({ tabs }: { tabs: readonly WorkspaceTab[] }) {
   const [active, setActive] = useState(tabs[0]!.id);
   const runs = useWorkspace((s) => s.runs.length);
 
-  // A new run brings its results forward.
+  // A new run brings its results forward — except in a lab, whose own panel is the point
+  // of running anything at all.
   useEffect(() => {
-    if (runs > 0) setActive('results');
-  }, [runs]);
+    if (runs > 0) setActive((current) => (current === tabs[0]!.id ? current : 'results'));
+  }, [runs, tabs]);
 
   return (
     <div className="flex h-full flex-col bg-surface-1">

@@ -46,13 +46,12 @@ receber um relatório de segurança do próprio banco.
 - `apps/sandbox-manager`: `DockerProvider`, máquina de estados, reconciliação, socket proxy, limite global e fila.
 - `/metrics` Prometheus (sandboxes ativos, tempo de provisionamento, falhas, órfãos coletados).
 - Teste de caos da reconciliação.
-- **Lab SQL Injection** com AST lado a lado (vulnerável × parametrizada) e mini-app HTTP vulnerável.
-- **Lab Roles & Permissions** com matriz de privilégios viva e "executar como".
-- **Lab Row-Level Security** multi-tenant.
-- **Export completo do schema**: políticas RLS, views, sequences, tipos, funções e triggers.
-  Hoje o export cobre tabelas, constraints e índices, e reporta o RLS em comentário em vez
-  de ligá-lo sem as políticas (que vivem fora do `SchemaSnapshot`). Entra junto do lab de
-  RLS, quando as políticas ganharem lugar no snapshot e no diff.
+- ~~**Lab SQL Injection** com AST lado a lado (vulnerável × parametrizada)~~ — feito (T0).
+  O mini-app HTTP vulnerável continua pendente: precisa do T2.
+- ~~**Lab Roles & Permissions** com matriz de privilégios viva e "executar como"~~ — feito (T0).
+- ~~**Lab Row-Level Security** multi-tenant~~ — feito (T0).
+- ~~**Export do schema com políticas RLS**~~ — feito: as políticas entraram no `SchemaSnapshot`,
+  no diff e no `toDdl`. Faltam views, sequences, tipos, funções e triggers.
 - **Link compartilhado com prévia**: hoje ele reexecuta o SQL assim que a página abre. O
   banco é o PGlite de quem abriu, mas é SQL de estranho rodando sem pergunta; mostrar o
   script e pedir confirmação é a decisão pendente.

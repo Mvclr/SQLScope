@@ -1,4 +1,4 @@
-import type { SchemaChange, SchemaSnapshot } from '@sqlscope/core';
+import type { DatabasePrivileges, SchemaChange, SchemaSnapshot } from '@sqlscope/core';
 import type { Measurement, QueryAnalysis, ScriptResult } from '@sqlscope/engine';
 import type { Report } from '@sqlscope/security-rules';
 
@@ -27,6 +27,11 @@ export interface WorkspaceBackend {
   analyze(sql: string): Promise<QueryAnalysisResult>;
   /** Runs the security rules over the current database. */
   report(): Promise<Report>;
+  /**
+   * Who may do what, for the labs that teach privileges. Only T0 offers it: reading the
+   * cluster's roles from a shared sandbox would show other people's sessions (ADR 0001).
+   */
+  privileges?(): Promise<DatabasePrivileges>;
   /** Notices from the server; T0 has none. */
   subscribe?(listener: (notice: SessionNotice) => void): () => void;
   close(): Promise<void>;

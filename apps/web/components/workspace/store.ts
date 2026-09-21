@@ -1,4 +1,4 @@
-import type { SchemaChange, SchemaSnapshot, TableRef } from '@sqlscope/core';
+import type { DatabasePrivileges, SchemaChange, SchemaSnapshot, TableRef } from '@sqlscope/core';
 import type { ScriptResult } from '@sqlscope/engine';
 import type { Report } from '@sqlscope/security-rules';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -58,6 +58,8 @@ export interface WorkspaceState {
   positions: Record<string, Point>;
   analysis: Loadable<QueryAnalysisResult>;
   report: Loadable<Report>;
+  /** Who may do what. Read on demand by the labs about privileges; T0 only. */
+  privileges: Loadable<DatabasePrivileges>;
   /** A past moment being looked at, instead of the current schema. */
   viewing: {
     readonly runId: number;
@@ -69,6 +71,8 @@ export interface WorkspaceState {
   timeTravelTo(runId: number | null): void;
   analyzeQuery(sql?: string): Promise<void>;
   buildReport(): Promise<void>;
+  /** Re-reads privileges from the database. Does nothing where the backend has none. */
+  readPrivileges(): Promise<void>;
   /** A view starts using the workspace: open it, or keep it open if it was just released. */
   attach(): void;
   /** A view stops using it. Closing is deferred, so an immediate re-attach reuses the database. */
@@ -111,7 +115,7 @@ export function createWorkspaceStore(
   let attached = false;
   let pendingClose: ReturnType<typeof setTimeout> | undefined;
   // Ticket of the newest request of each kind; older answers are dropped (see `load`).
-  const latest = { analysis: 0, report: 0 };
+  const latest = { analysis: 0, report: 0, privileges: 0 };
 
   return createStore<WorkspaceState>()((set, get) => {
     const applySchema = (snapshot: SchemaSnapshot, changes: readonly SchemaChange[]) =>
@@ -131,7 +135,7 @@ export function createWorkspaceStore(
      * and show the plan of a query that is no longer on screen.
      */
     const load = async <T>(
-      key: 'analysis' | 'report',
+      key: 'analysis' | 'report' | 'privileges',
       request: () => Promise<T>,
     ): Promise<void> => {
       const ticket = (latest[key] += 1);
@@ -160,6 +164,7 @@ export function createWorkspaceStore(
       positions: {},
       analysis: idle(),
       report: idle(),
+      privileges: idle(),
       viewing: null,
 
       timeTravelTo(runId) {
@@ -184,6 +189,13 @@ export function createWorkspaceStore(
       buildReport() {
         return get().status === 'ready'
           ? load('report', () => backend.report())
+          : Promise.resolve();
+      },
+
+      readPrivileges() {
+        const read = backend.privileges;
+        return read && get().status === 'ready'
+          ? load('privileges', () => read.call(backend))
           : Promise.resolve();
       },
 
@@ -240,6 +252,7 @@ export function createWorkspaceStore(
           notice: null,
           analysis: idle(),
           report: idle(),
+          privileges: idle(),
           // The runs it pointed at are gone, and so is the database they described.
           viewing: null,
         });

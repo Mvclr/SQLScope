@@ -4,13 +4,18 @@
 
 Ambiente interativo para construir, visualizar, analisar e proteger bancos de dados relacionais — com SQL executado em PostgreSQL real e isolado, e cada efeito mostrado visualmente.
 
-> **Status:** Fases 1 e 2 implementadas; falta o deploy público. Ver o [roadmap](docs/ROADMAP.md).
+> **Status:** Fases 1 e 2 completas e os labs de segurança da Fase 3 no ar; faltam o sandbox
+> T2 e o deploy público. Ver o [roadmap](docs/ROADMAP.md).
 
 ## O que dá para fazer
 
 - **Learn**: cenários (loja online, biblioteca) com desafios corrigidos automaticamente. Tudo roda no navegador, com PostgreSQL compilado para WebAssembly (PGlite).
 - **Build**: um PostgreSQL 18 só seu no servidor, isolado e descartável. Cada `CREATE`, `ALTER` e FK aparece no diagrama no momento em que é executado.
 - **Importar**: cole o DDL de um schema existente e veja tabelas, chaves e relacionamentos.
+- **Secure**: três laboratórios guiados no seu navegador, onde você é superusuário — injeção
+  de SQL vista pela árvore sintática, roles e privilégios com matriz viva e "executar como",
+  e Row-Level Security multi-tenant. Cada passo diz o que vai acontecer, e um teste executa
+  os três do início ao fim para garantir que ainda acontece.
 - **Medir e comparar**: analise uma consulta, veja o plano de execução com tempo real por nó, crie um índice e compare o antes e o depois.
 - **Relatório de segurança**: 11 regras sobre chaves, índices, privilégios e isolamento, cada achado com o que fazer a respeito.
 - **Guardar e compartilhar**: histórico com time-travel e replay, link que reconstrói a sessão no navegador de quem abrir, export em SQL, DBML e PNG, e conta para salvar projetos.

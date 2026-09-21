@@ -64,6 +64,10 @@ export function pgliteBackend(setup?: DatabaseSetup): WorkspaceBackend {
       return { analysis: result.value, previous };
     },
 
+    privileges() {
+      return readPrivileges(session());
+    },
+
     async report() {
       const { analyze } = await import('@sqlscope/security-rules');
       const executor = session();

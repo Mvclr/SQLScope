@@ -23,12 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <NavLink href="/learn">Learn</NavLink>
             <NavLink href="/build">Build</NavLink>
             <NavLink href="/import">Importar</NavLink>
-            <span
-              className="cursor-not-allowed px-3 py-1.5 text-faint"
-              title="Laboratórios de segurança chegam em uma próxima versão"
-            >
-              Secure <span className="text-[11px]">· em breve</span>
-            </span>
+            <NavLink href="/secure">Secure</NavLink>
           </nav>
           <AccountNav />
         </header>

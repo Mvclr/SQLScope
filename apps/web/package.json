@@ -18,6 +18,7 @@
     "@sqlscope/core": "workspace:*",
     "@sqlscope/engine": "workspace:*",
     "@sqlscope/explain": "workspace:*",
+    "@sqlscope/labs": "workspace:*",
     "@sqlscope/scenarios": "workspace:*",
     "@sqlscope/security-rules": "workspace:*",
     "@sqlscope/sql-parser": "workspace:*",

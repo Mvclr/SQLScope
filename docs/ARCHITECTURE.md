@@ -69,8 +69,9 @@ No T0 o mesmo `runScript` roda no navegador sobre o PGlite, sem HTTP. A simetria
 | `@sqlscope/explain`        | navegador e Node  | plano do `EXPLAIN` em árvore tipada e observações sobre ele                  |
 | `@sqlscope/security-rules` | navegador e Node  | regras puras sobre snapshot e privilégios (ADR 0006)                         |
 | `@sqlscope/scenarios`      | navegador (e SSR) | cenários como dados; `scenarios/check` valida respostas por variantes        |
+| `@sqlscope/labs`           | navegador (e SSR) | labs SECURE como dados: setup, passos, o que cada passo promete (ADR 0009)   |
 | `apps/api`                 | Node              | sessões T1, provisionador, execução, SSE, rate limit, reaper                 |
-| `apps/web`                 | navegador e Node  | Next.js: Learn (T0), Build (T1), Importar (T0)                               |
+| `apps/web`                 | navegador e Node  | Next.js: Learn (T0), Build (T1), Importar (T0), Secure (T0)                  |
 
 O web só carrega engine, parser e validador **sob demanda**: eles trazem WebAssembly, que não pode ser instanciado durante o SSR e não é necessário para desenhar a página.
 
@@ -93,6 +94,17 @@ POST /labs/:labId/start
   → usuário interage; expiração → EXPIRING → DESTROYING → DESTROYED
   → reconciliador converge qualquer divergência
 ```
+
+## Labs SECURE
+
+Ver ADR 0009. Rodam só no T0, porque criar roles e políticas exige ser superusuário do
+próprio banco — e a sessão T1 é criada sem esse poder de propósito. Cada passo declara o
+SQLSTATE em que termina (quando ensina pela recusa) e quantas linhas devolve; um teste
+executa os três labs de ponta a ponta e cobra as duas promessas.
+
+Três painéis ao vivo: árvore sintática lado a lado (o que a aplicação queria × o que o
+banco recebeu), matriz de privilégios lida do catálogo a cada execução, e as políticas RLS
+lidas do snapshot.
 
 ## Contas e projetos
 
