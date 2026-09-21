@@ -87,6 +87,7 @@ docs/           conceito, arquitetura, roadmap, design e ADRs
   - [0006 — Security Analyzer com regras puras](docs/adr/0006-security-analyzer-regras-puras.md)
   - [0007 — Monorepo e stack](docs/adr/0007-monorepo-e-stack.md)
   - [0008 — Contas guardam SQL, não bancos](docs/adr/0008-contas-e-projetos.md)
+  - [0009 — Labs SECURE rodam no navegador (T0)](docs/adr/0009-labs-no-navegador.md)
 
 ## Licença
 
