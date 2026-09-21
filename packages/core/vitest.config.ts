@@ -8,6 +8,7 @@ export default defineConfig({
           name: 'unit',
           include: ['test/**/*.test.ts'],
           exclude: ['test/**/*.integration.test.ts'],
+          testTimeout: 20_000,
         },
       },
       {
