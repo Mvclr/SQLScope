@@ -77,6 +77,7 @@ docs/           conceito, arquitetura, roadmap, design e ADRs
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Design](docs/DESIGN.md)
+- [Como contribuir](CONTRIBUTING.md) — convenção de commits (Conventional Commits)
 - Decisões de arquitetura:
   - [0001 — Isolamento em camadas (T0/T1/T2)](docs/adr/0001-isolamento-em-camadas.md)
   - [0002 — Sandbox Manager separado, com reconciliação](docs/adr/0002-sandbox-manager-separado.md)
