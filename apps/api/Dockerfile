@@ -10,6 +10,7 @@ FROM base AS build
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter "@sqlscope/api..."
+RUN pnpm --filter "@sqlscope/api" run generate
 RUN pnpm --filter "@sqlscope/api..." run build
 # Self-contained production tree: only runtime dependencies, workspace packages included.
 RUN pnpm --filter @sqlscope/api deploy --prod /out
