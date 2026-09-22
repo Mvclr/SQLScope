@@ -1,6 +1,13 @@
 import type { ForeignKeyConstraint, SchemaSnapshot, TableSnapshot } from '../snapshot.js';
 
 /**
+ * Wraps a name in the double quotes DBML uses, escaping any the name itself contains so a
+ * table or column named `a"b` cannot break out of its quotes and corrupt the file. DBML
+ * strings take backslash escapes, the same as its `Note` strings.
+ */
+const quote = (value: string) => `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
+
+/**
  * Renders the schema as DBML (dbdiagram.io), the format most diagram tools import.
  *
  * Only what a diagram shows: tables, columns, keys and relationships.
@@ -30,11 +37,11 @@ function tableBlock(table: TableSnapshot): string {
       column.identity ? 'increment' : null,
     ].filter(Boolean);
     const suffix = settings.length > 0 ? ` [${settings.join(', ')}]` : '';
-    return `  "${column.name}" "${column.dataType}"${suffix}`;
+    return `  ${quote(column.name)} ${quote(column.dataType)}${suffix}`;
   });
 
   const note = table.rowSecurity.enabled ? `  Note: 'row level security enabled'\n` : '';
-  return `Table "${name(table)}" {\n${columns.join('\n')}\n${note}}`;
+  return `Table ${quote(name(table))} {\n${columns.join('\n')}\n${note}}`;
 }
 
 /** `>` is "many to one" in DBML: many rows here point at one row there. */
@@ -48,7 +55,9 @@ function referenceLines(table: TableSnapshot, snapshot: SchemaSnapshot): string[
       const [column] = constraint.columns;
       const [referenced] = constraint.references.columns;
       if (!target || !column || !referenced) return [];
-      return [`Ref: "${name(table)}"."${column}" > "${name(target)}"."${referenced}"`];
+      return [
+        `Ref: ${quote(name(table))}.${quote(column)} > ${quote(name(target))}.${quote(referenced)}`,
+      ];
     });
 }
 

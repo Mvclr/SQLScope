@@ -444,6 +444,7 @@ export function describeEngineContract(
          id bigint generated always as identity primary key,
          email varchar(255) not null unique,
          "select" text,
+         "a""b" text,
          created_at timestamptz not null default now(),
          email_lower text generated always as (lower(email)) stored
        )`,
@@ -488,6 +489,8 @@ export function describeEngineContract(
       expect(dbml).toContain('Table "users" {');
       expect(dbml).toContain('"id" "bigint" [pk, not null, increment]');
       expect(dbml).toContain('"email" "character varying(255)" [unique, not null]');
+      // A quote in a column name is escaped, not left to break out of its quotes.
+      expect(dbml).toContain('"a\\"b" "text"');
       expect(dbml).toContain('Table "reporting.daily" {');
       expect(dbml).toContain('Ref: "orders"."user_id" > "users"."id"');
       expect(dbml).toContain("Note: 'row level security enabled'");
