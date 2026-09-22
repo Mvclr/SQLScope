@@ -2,8 +2,9 @@
 
 import type { TableSnapshot } from '@sqlscope/core';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { Table2 } from 'lucide-react';
 import { memo } from 'react';
-import { NODE_WIDTH } from './layout';
+import { HEADER_HEIGHT, NODE_WIDTH, ROW_HEIGHT } from './layout';
 
 export interface TableNodeData extends Record<string, unknown> {
   table: TableSnapshot;
@@ -19,11 +20,11 @@ export type TableNodeType = Node<TableNodeData, 'table'>;
 type Badge = 'PK' | 'FK' | 'UQ' | 'NN' | 'IDX';
 
 const badgeStyle: Record<Badge, string> = {
-  PK: 'text-accent border-accent/40',
-  FK: 'text-structure border-structure/40',
-  UQ: 'text-sev-info border-sev-info/40',
-  NN: 'text-muted border-border',
-  IDX: 'text-perf-gain border-perf-gain/40',
+  PK: 'bg-accent/12 text-accent',
+  FK: 'bg-structure/12 text-structure',
+  UQ: 'bg-sev-info/12 text-sev-info',
+  NN: 'bg-surface-3 text-muted',
+  IDX: 'bg-perf-gain/12 text-perf-gain',
 };
 
 const badgeTitle: Record<Badge, string> = {
@@ -64,10 +65,14 @@ function TableNodeView({ data }: NodeProps<TableNodeType>) {
     <div
       // Remounting on a new stamp restarts the halo animation.
       key={changed || born ? stamp : 'steady'}
-      className={`rounded-lg border border-border bg-surface-1 shadow-lg shadow-black/20 ${born ? 'table-born' : ''} ${changed && !born ? 'delta-halo' : ''}`}
+      className={`rounded-xl border border-border bg-surface-1 shadow-[var(--elevation-2)] ${born ? 'table-born' : ''} ${changed && !born ? 'delta-halo' : ''}`}
       style={{ width: NODE_WIDTH }}
     >
-      <header className="flex items-center gap-2 rounded-t-lg border-b border-border bg-structure-soft px-3 py-2">
+      <header
+        className="flex items-center gap-2 rounded-t-xl border-b border-border bg-structure-soft px-3"
+        style={{ height: HEADER_HEIGHT }}
+      >
+        <Table2 aria-hidden className="size-3.5 shrink-0 text-structure" />
         <span className="truncate font-mono text-[13px] font-semibold text-text">
           {table.schema !== 'public' && <span className="text-muted">{table.schema}.</span>}
           {table.name}
@@ -75,7 +80,7 @@ function TableNodeView({ data }: NodeProps<TableNodeType>) {
         {table.rowSecurity.enabled && (
           <span
             title="Row-Level Security ativo"
-            className="ml-auto rounded border border-sev-warning/50 px-1 font-mono text-[10px] text-sev-warning"
+            className="ml-auto rounded-md bg-sev-warning/15 px-1.5 font-mono text-[10px] leading-4 text-sev-warning"
           >
             RLS
           </span>
@@ -92,7 +97,8 @@ function TableNodeView({ data }: NodeProps<TableNodeType>) {
           return (
             <li
               key={column.position}
-              className={`relative flex h-[26px] items-center gap-2 px-3 text-[12px] ${columnClass}`}
+              className={`relative flex items-center gap-2 px-3 text-[12px] hover:bg-surface-2 ${columnClass}`}
+              style={{ height: ROW_HEIGHT }}
             >
               <Handle
                 type="target"
@@ -109,7 +115,7 @@ function TableNodeView({ data }: NodeProps<TableNodeType>) {
                   <span
                     key={badge}
                     title={badgeTitle[badge]}
-                    className={`rounded border px-1 font-mono text-[10px] leading-4 ${badgeStyle[badge]}`}
+                    className={`rounded-md px-1 font-mono text-[10px] leading-4 ${badgeStyle[badge]}`}
                   >
                     {badge}
                   </span>

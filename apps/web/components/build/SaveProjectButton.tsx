@@ -1,8 +1,10 @@
 'use client';
 
+import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { AccountError, currentAccount, saveProject } from '../../lib/account';
+import { buttonClass } from '../ui/button';
 import type { WorkspaceStore } from '../workspace/store';
 
 /**
@@ -47,11 +49,8 @@ export function SaveProjectButton({ store }: { store: WorkspaceStore }) {
   if (!naming) {
     return (
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setNaming(true)}
-          className="rounded-md border border-border px-2.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-text"
-        >
+        <button type="button" onClick={() => setNaming(true)} className={buttonClass('secondary')}>
+          <Save aria-hidden />
           Salvar projeto
         </button>
         {message && <span className="text-[12px] text-muted">{message}</span>}
@@ -74,19 +73,13 @@ export function SaveProjectButton({ store }: { store: WorkspaceStore }) {
         placeholder="Nome do projeto"
         aria-label="Nome do projeto"
         maxLength={120}
-        className="w-44 rounded border border-border bg-surface-2 px-2 py-1 text-[12px]"
+        className="h-7 w-44 rounded-lg border border-border bg-surface-2 px-2.5 text-[12px] outline-none transition-colors focus:border-accent"
       />
-      <button
-        type="submit"
-        className="rounded-md border border-accent px-2.5 py-1 text-[12px] text-accent hover:bg-accent hover:text-surface-0"
-      >
+      <button type="submit" className={buttonClass('outline')}>
+        <Save aria-hidden />
         Salvar
       </button>
-      <button
-        type="button"
-        onClick={() => setNaming(false)}
-        className="text-[12px] text-muted hover:text-text"
-      >
+      <button type="button" onClick={() => setNaming(false)} className={buttonClass('ghost')}>
         Cancelar
       </button>
     </form>

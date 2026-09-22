@@ -3,6 +3,9 @@
 import type { Measurement, QueryAnalysis } from '@sqlscope/engine';
 import { compareAnalyses } from '@sqlscope/engine/display';
 import type { PlanNode } from '@sqlscope/explain';
+import { ArrowRight, CircleX, Gauge, LoaderCircle, TriangleAlert } from 'lucide-react';
+import { buttonClass } from '../ui/button';
+import { EmptyState } from '../ui/EmptyState';
 import { SeverityTag } from '../ui/Severity';
 import { useWorkspace } from './context';
 
@@ -28,8 +31,9 @@ export function PlanPanel() {
           type="button"
           onClick={() => void analyzeQuery()}
           disabled={loading || status !== 'ready'}
-          className="rounded-md border border-accent px-2.5 py-1 text-[12px] text-accent hover:bg-accent hover:text-surface-0 disabled:opacity-50"
+          className={buttonClass('outline')}
         >
+          {loading ? <LoaderCircle aria-hidden className="animate-spin" /> : <Gauge aria-hidden />}
           {loading ? 'Analisando…' : 'Analisar consulta'}
         </button>
         <span className="text-[12px] text-faint">
@@ -41,22 +45,24 @@ export function PlanPanel() {
         {analysis.status === 'error' && (
           <p
             role="alert"
-            className="m-3 rounded-md border border-sev-critical/40 bg-sev-critical/10 p-3 text-[13px] text-sev-critical"
+            className="m-3 flex items-start gap-2 rounded-xl border border-sev-critical/30 bg-sev-critical/8 p-3 text-[13px] text-sev-critical"
           >
-            ✕ {analysis.error}
+            <CircleX aria-hidden className="mt-0.5 size-4 shrink-0" />
+            {analysis.error}
           </p>
         )}
         {analysis.data === null && analysis.status !== 'error' && (
-          <p className="p-4 text-[13px] text-muted">
+          <EmptyState icon={Gauge}>
             Escreva uma consulta e clique em <strong>Analisar consulta</strong> para ver o plano de
             execução, o tempo real e o que o banco fez com ela.
-          </p>
+          </EmptyState>
         )}
         {analysis.data && (
           <div className="p-3">
             {analysis.stale && (
-              <p className="mb-3 text-[12px] text-sev-warning">
-                △ O schema mudou desde esta análise. Analise de novo para ver o efeito.
+              <p className="mb-3 flex items-center gap-1.5 text-[12px] text-sev-warning">
+                <TriangleAlert aria-hidden className="size-3.5 shrink-0" />O schema mudou desde esta
+                análise. Analise de novo para ver o efeito.
               </p>
             )}
             {analysis.data.previous && (
@@ -64,7 +70,7 @@ export function PlanPanel() {
             )}
             <Summary analysis={analysis.data.analysis} />
             <Insights analysis={analysis.data.analysis} />
-            <h3 className="mb-2 mt-4 text-[12px] font-semibold uppercase tracking-wide text-muted">
+            <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-faint">
               Plano de execução
             </h3>
             <PlanTree
@@ -89,7 +95,7 @@ function Comparison({ before, after }: { before: Measurement; after: QueryAnalys
   return (
     <section
       aria-label="Comparação com a análise anterior"
-      className={`mb-4 rounded-md border p-3 ${faster ? 'border-perf-gain/40 bg-perf-gain/10' : 'border-border bg-surface-2'}`}
+      className={`mb-4 rounded-xl border p-3 ${faster ? 'border-perf-gain/35 bg-perf-gain/8' : 'border-border bg-surface-2'}`}
     >
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div>
@@ -102,13 +108,15 @@ function Comparison({ before, after }: { before: Measurement; after: QueryAnalys
         <div
           className={`text-center font-mono text-[13px] ${faster ? 'text-perf-gain' : slower ? 'text-sev-warning' : 'text-muted'}`}
         >
-          {speedup === null
-            ? '→'
-            : faster
-              ? `${speedup.toFixed(1)}× mais rápido`
-              : slower
-                ? `${(1 / speedup).toFixed(1)}× mais lento`
-                : 'sem diferença mensurável'}
+          {speedup === null ? (
+            <ArrowRight aria-label="depois" className="mx-auto size-4" />
+          ) : faster ? (
+            `${speedup.toFixed(1)}× mais rápido`
+          ) : slower ? (
+            `${(1 / speedup).toFixed(1)}× mais lento`
+          ) : (
+            'sem diferença mensurável'
+          )}
         </div>
         <div>
           <p className="text-[11px] uppercase tracking-wide text-faint">Depois</p>
@@ -145,16 +153,17 @@ function Summary({ analysis }: { analysis: QueryAnalysis }) {
   return (
     <>
       {analysis.notMeasured === 'not-read-only' && (
-        <p className="mb-3 rounded-md border border-sev-warning/40 bg-sev-warning/10 p-2 text-[12px] text-sev-warning">
-          △ Esta instrução escreve no banco. O plano é a estimativa do planejador: medir exigiria
+        <p className="mb-3 flex items-start gap-1.5 rounded-xl border border-sev-warning/30 bg-sev-warning/8 p-2.5 text-[12px] text-sev-warning">
+          <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
+          Esta instrução escreve no banco. O plano é a estimativa do planejador: medir exigiria
           executá-la de verdade.
         </p>
       )}
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {items.map(([label, value]) => (
-          <div key={label} className="rounded-md border border-border bg-surface-2 px-2.5 py-1.5">
-            <dt className="text-[11px] uppercase tracking-wide text-faint">{label}</dt>
-            <dd className="font-mono text-[13px] tabular-nums">{value}</dd>
+          <div key={label} className="rounded-xl border border-border bg-surface-2 px-3 py-2">
+            <dt className="text-[11px] uppercase tracking-wider text-faint">{label}</dt>
+            <dd className="mt-0.5 font-mono text-[14px] font-medium tabular-nums">{value}</dd>
           </div>
         ))}
       </dl>
@@ -167,7 +176,7 @@ function Insights({ analysis }: { analysis: QueryAnalysis }) {
   return (
     <ul className="mt-4 space-y-2">
       {analysis.insights.map((insight, i) => (
-        <li key={i} className="flex gap-2 rounded-md border border-border bg-surface-1 p-2.5">
+        <li key={i} className="flex gap-2 rounded-xl border border-border bg-surface-1 p-3">
           <SeverityTag severity={insight.severity} />
           <div className="min-w-0">
             <p className="text-[13px] font-medium">{insight.title}</p>
@@ -204,10 +213,13 @@ function PlanTree({ node, total, depth }: { node: PlanNode; total: number; depth
         </div>
         {share > 0 && (
           <div
-            className="mt-0.5 h-1 w-full overflow-hidden rounded bg-surface-2"
+            className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-2"
             title={`${Math.round(share * 100)}% do tempo neste nó`}
           >
-            <div className="h-full bg-accent" style={{ width: `${Math.max(2, share * 100)}%` }} />
+            <div
+              className="h-full rounded-full bg-accent"
+              style={{ width: `${Math.max(2, share * 100)}%` }}
+            />
           </div>
         )}
         {details.length > 0 && (

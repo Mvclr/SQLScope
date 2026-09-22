@@ -11,7 +11,9 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/base.css';
+import { Database, History, LayoutGrid } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buttonClass } from '../ui/button';
 import { useWorkspace } from '../workspace/context';
 import type { Highlights, Point } from '../workspace/store';
 import { ExportMenu } from './ExportMenu';
@@ -152,9 +154,20 @@ function Canvas() {
 
   if (snapshot.tables.length === 0) return <EmptyCanvas />;
 
+  const count = snapshot.tables.length;
+
   return (
-    <div className="relative h-full w-full">
-      <TimeTravelBanner />
+    <div className="relative h-full w-full bg-canvas">
+      <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col items-start gap-2">
+        <span className="glass flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-[12px] font-medium text-muted">
+          <Database aria-hidden className="size-3.5 text-structure" />
+          Schema
+          <span className="font-normal text-faint">
+            · {count} {count === 1 ? 'tabela' : 'tabelas'}
+          </span>
+        </span>
+        <TimeTravelBanner />
+      </div>
       <ReactFlow
         key={layoutVersion}
         fitView
@@ -170,15 +183,22 @@ function Canvas() {
         proOptions={{ hideAttribution: true }}
         aria-label="Diagrama do schema"
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--border)" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1.2}
+          color="var(--border-strong)"
+        />
         <Controls showInteractive={false} />
       </ReactFlow>
-      <div className="absolute right-3 top-3 flex gap-2">
+      <div className="glass absolute right-3 top-3 z-10 flex items-center gap-0.5 rounded-xl p-1">
         <button
           type="button"
           onClick={relayout}
-          className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[12px] text-muted hover:bg-surface-3 hover:text-text"
+          title="Recalcula a posição de todas as tabelas"
+          className={buttonClass('ghost')}
         >
+          <LayoutGrid aria-hidden />
           Reorganizar
         </button>
         <ExportMenu />
@@ -190,16 +210,26 @@ function Canvas() {
 
 function EmptyCanvas() {
   return (
-    <div className="flex h-full items-center justify-center p-8">
-      <div className="w-64 rounded-lg border border-dashed border-border p-4 text-center">
-        <div className="mb-3 h-6 rounded bg-surface-2" />
-        <div className="mb-2 h-3 w-3/4 rounded bg-surface-2" />
-        <div className="mb-4 h-3 w-1/2 rounded bg-surface-2" />
-        <p className="text-[13px] text-muted">
-          Execute um <code className="font-mono text-structure">CREATE TABLE</code> e ela aparece
-          aqui.
-        </p>
+    <div className="flex h-full flex-col items-center justify-center gap-5 bg-canvas p-8">
+      <div
+        aria-hidden
+        className="w-60 rounded-xl border border-dashed border-border-strong bg-surface-1/60 p-3"
+      >
+        <div className="mb-3 flex items-center gap-2">
+          <div className="size-4 rounded bg-surface-3" />
+          <div className="h-3 w-24 rounded bg-surface-3" />
+        </div>
+        {[0.75, 0.55, 0.65].map((width) => (
+          <div key={width} className="mb-2 flex items-center gap-2 last:mb-0">
+            <div className="h-2.5 rounded bg-surface-2" style={{ width: `${width * 100}%` }} />
+            <div className="ml-auto h-2.5 w-6 rounded bg-surface-2" />
+          </div>
+        ))}
       </div>
+      <p className="max-w-64 text-center text-[13px] text-muted">
+        Execute um <code className="font-mono text-structure">CREATE TABLE</code> e ela aparece
+        aqui.
+      </p>
     </div>
   );
 }
@@ -238,9 +268,14 @@ function TimeTravelBanner() {
   if (!viewing) return null;
 
   return (
-    <div className="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-md border border-sev-warning/40 bg-sev-warning/10 px-2.5 py-1 text-[12px] text-sev-warning">
+    <div className="pointer-events-auto flex h-8 items-center gap-2 rounded-xl border border-sev-warning/40 bg-surface-1 px-2.5 text-[12px] text-sev-warning shadow-[var(--elevation-1)]">
+      <History aria-hidden className="size-3.5" />
       <span>Vendo o schema de {new Date(viewing.at).toLocaleTimeString('pt-BR')}</span>
-      <button type="button" onClick={() => timeTravelTo(null)} className="underline">
+      <button
+        type="button"
+        onClick={() => timeTravelTo(null)}
+        className="font-medium underline underline-offset-2"
+      >
         voltar ao atual
       </button>
     </div>

@@ -9,11 +9,17 @@
  */
 
 const HEX = /^#?([0-9a-f]{6}(?:[0-9a-f]{2})?)$/i;
+/** The CSS minifier writes `#ffffff` as `#fff`; Monaco rejects the short form. */
+const SHORT_HEX = /^#?([0-9a-f]{3,4})$/i;
 
 /** Returns the hex digits without `#`, or the fallback when the value is unusable. */
 export function hexOrFallback(value: string | undefined, fallback: string): string {
-  const match = HEX.exec((value ?? '').trim());
-  return match ? match[1]!.toLowerCase() : fallback;
+  const text = (value ?? '').trim();
+  const match = HEX.exec(text);
+  if (match) return match[1]!.toLowerCase();
+  const short = SHORT_HEX.exec(text);
+  if (short) return [...short[1]!.toLowerCase()].map((digit) => digit + digit).join('');
+  return fallback;
 }
 
 export interface EditorPalette {
@@ -29,22 +35,22 @@ export interface EditorPalette {
 /** Same roles as docs/DESIGN.md, in case the tokens cannot be read. */
 const FALLBACK: Record<'dark' | 'light', EditorPalette> = {
   dark: {
-    keyword: '3fa7a3',
+    keyword: '4fbdb5',
     string: 'f5b544',
-    number: '6ee7f0',
-    comment: '5f6b77',
-    background: '11161b',
-    lineHighlight: '182028',
-    lineNumber: '5f6b77',
+    number: '22d3ee',
+    comment: '8693a9',
+    background: '111826',
+    lineHighlight: '182132',
+    lineNumber: '8693a9',
   },
   light: {
-    keyword: '1f7c78',
-    string: 'b7791f',
-    number: '0a8fa0',
-    comment: '8a959f',
+    keyword: '0f766e',
+    string: '935f00',
+    number: '0e7490',
+    comment: '5a6980',
     background: 'ffffff',
-    lineHighlight: 'eef2f5',
-    lineNumber: '8a959f',
+    lineHighlight: 'f4f6f9',
+    lineNumber: '5a6980',
   },
 };
 

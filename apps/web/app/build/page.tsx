@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: 'Build' };
 export default function BuildPage() {
   // BuildWorkspace reads the `projeto` query parameter, which needs a Suspense boundary.
   return (
-    <Suspense fallback={<p className="p-6 text-muted">Carregando…</p>}>
+    <Suspense fallback={<p className="p-6 text-[13px] text-faint">Carregando…</p>}>
       <BuildWorkspace />
     </Suspense>
   );

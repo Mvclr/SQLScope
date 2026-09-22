@@ -1,34 +1,54 @@
 import { scenarios } from '@sqlscope/scenarios';
+import {
+  BookOpen,
+  Database,
+  Globe,
+  GraduationCap,
+  ListChecks,
+  ShoppingCart,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { CatalogCard, CatalogHeader } from '../../components/ui/Catalog';
 
 export const metadata: Metadata = { title: 'Learn' };
 
+const icons: Record<string, LucideIcon> = { 'loja-online': ShoppingCart, biblioteca: BookOpen };
+
 export default function LearnCatalog() {
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-[20px] font-semibold">Cenários</h1>
-      <p className="mt-1 text-muted">
-        Cada cenário é um pequeno banco com dados e desafios. Tudo roda no seu navegador — nada é
-        enviado a um servidor.
-      </p>
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-        {scenarios.map((scenario) => (
-          <li key={scenario.id}>
-            <Link
-              href={`/learn/${scenario.id}`}
-              className="block rounded-lg border border-border bg-surface-1 p-5 hover:border-accent"
-            >
-              <span className="font-mono text-[11px] uppercase tracking-wide text-structure">
-                {scenario.level}
-              </span>
-              <h2 className="mt-1 text-[16px] font-semibold">{scenario.title}</h2>
-              <p className="mt-2 text-[13px] text-muted">{scenario.summary}</p>
-              <p className="mt-3 text-[12px] text-faint">{scenario.challenges.length} desafios</p>
-            </Link>
-          </li>
-        ))}
-      </ul>
+    <div className="h-full overflow-auto">
+      <div className="mx-auto max-w-5xl px-4 pb-8 pt-2 sm:px-6">
+        <CatalogHeader
+          icon={GraduationCap}
+          title="Cenários"
+          where={
+            <>
+              <Globe aria-hidden className="size-3" />
+              PGlite · no seu navegador
+            </>
+          }
+        >
+          Cada cenário é um pequeno banco com dados e desafios. Tudo roda no seu navegador — nada é
+          enviado a um servidor.
+        </CatalogHeader>
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+          {scenarios.map((scenario, i) => (
+            <li key={scenario.id}>
+              <CatalogCard
+                href={`/learn/${scenario.id}`}
+                index={i + 1}
+                icon={icons[scenario.id] ?? Database}
+                level={scenario.level}
+                title={scenario.title}
+                summary={scenario.summary}
+                count={`${scenario.challenges.length} desafios`}
+                countIcon={ListChecks}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 'use client';
 
 import { findLab, type Lab } from '@sqlscope/labs';
+import { KeyRound, ListTree, RotateCcw, Rows3, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { buttonClass } from '../ui/button';
 import { pgliteBackend } from '../workspace/pglite-backend';
 import { createWorkspaceStore } from '../workspace/store';
 import { Workspace, type WorkspaceTab } from '../workspace/Workspace';
@@ -10,10 +12,17 @@ import { PoliciesPanel } from './PoliciesPanel';
 import { PrivilegesPanel } from './PrivilegesPanel';
 import { StepsPanel } from './StepsPanel';
 
-const PANEL: Record<Lab['panel'], { label: string; content: (lab: Lab) => ReactNode }> = {
-  ast: { label: 'Árvore', content: (lab) => <AstPanel baseline={lab.steps[0]!.sql} /> },
-  privileges: { label: 'Privilégios', content: () => <PrivilegesPanel /> },
-  policies: { label: 'Políticas', content: () => <PoliciesPanel /> },
+const PANEL: Record<
+  Lab['panel'],
+  { label: string; icon: LucideIcon; content: (lab: Lab) => ReactNode }
+> = {
+  ast: {
+    label: 'Árvore',
+    icon: ListTree,
+    content: (lab) => <AstPanel baseline={lab.steps[0]!.sql} />,
+  },
+  privileges: { label: 'Privilégios', icon: KeyRound, content: () => <PrivilegesPanel /> },
+  policies: { label: 'Políticas', icon: Rows3, content: () => <PoliciesPanel /> },
 };
 
 /**
@@ -31,7 +40,9 @@ export function LabWorkspace({ labId }: { labId: string }) {
   );
 
   const panel = PANEL[lab.panel];
-  const tabs: WorkspaceTab[] = [{ id: 'lab', label: panel.label, content: panel.content(lab) }];
+  const tabs: WorkspaceTab[] = [
+    { id: 'lab', label: panel.label, icon: panel.icon, content: panel.content(lab) },
+  ];
 
   return (
     <Workspace
@@ -44,8 +55,9 @@ export function LabWorkspace({ labId }: { labId: string }) {
           type="button"
           onClick={() => void store.getState().reset()}
           title="Descarta o banco e recomeça o lab do zero"
-          className="ml-auto rounded-md border border-border px-2.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-text"
+          className={buttonClass('secondary', 'sm', 'ml-auto')}
         >
+          <RotateCcw aria-hidden />
           Recomeçar o lab
         </button>
       }

@@ -1,5 +1,6 @@
 'use client';
 
+import { CircleX, Equal, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useWorkspace } from '../workspace/context';
 
@@ -88,16 +89,46 @@ async function parse(sql: string): Promise<{ tree: TreeNode[] } | { error: strin
   return { tree: parsed.value.flatMap((statement) => toTree(statement.ast)) };
 }
 
-function Tree({ nodes, depth = 0 }: { nodes: readonly TreeNode[]; depth?: number }) {
+/** The shape label of one node — see `shapeOf`. */
+function shapeLabel(node: TreeNode): string {
+  const operator = node.detail?.startsWith('op:') || node.detail?.startsWith('boolop:');
+  return operator ? `${node.label} (${node.detail})` : node.label;
+}
+
+function Tree({
+  nodes,
+  depth = 0,
+  injected,
+}: {
+  nodes: readonly TreeNode[];
+  depth?: number;
+  /** Shapes the application never wrote: drawn in the critical colour (DESIGN.md › Labs). */
+  injected?: ReadonlySet<string> | undefined;
+}) {
   return (
-    <ul className={depth === 0 ? 'font-mono text-[12px]' : 'border-l border-border/60 pl-3'}>
-      {nodes.map((node, index) => (
-        <li key={`${node.label}-${index}`} className="py-0.5">
-          <span className={depth === 0 ? 'text-structure' : 'text-text'}>{node.label}</span>
-          {node.detail && <span className="ml-2 text-muted">{node.detail}</span>}
-          {node.children.length > 0 && <Tree nodes={node.children} depth={depth + 1} />}
-        </li>
-      ))}
+    <ul className={depth === 0 ? 'font-mono text-[12px]' : 'border-l border-border pl-3'}>
+      {nodes.map((node, index) => {
+        const foreign = injected?.has(shapeLabel(node));
+        return (
+          <li key={`${node.label}-${index}`} className="py-0.5">
+            <span
+              className={
+                foreign
+                  ? 'rounded bg-sev-critical/12 px-1 font-semibold text-sev-critical'
+                  : depth === 0
+                    ? 'text-structure'
+                    : 'text-text'
+              }
+            >
+              {node.label}
+            </span>
+            {node.detail && <span className="ml-2 text-muted">{node.detail}</span>}
+            {node.children.length > 0 && (
+              <Tree nodes={node.children} depth={depth + 1} injected={injected} />
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -107,10 +138,7 @@ function Tree({ nodes, depth = 0 }: { nodes: readonly TreeNode[]; depth?: number
  * their shape. `SelectStmt` alone cannot tell a plain query from a UNION.
  */
 function shapeOf(nodes: readonly TreeNode[]): string[] {
-  return nodes.flatMap((node) => {
-    const operator = node.detail?.startsWith('op:') || node.detail?.startsWith('boolop:');
-    return [operator ? `${node.label} (${node.detail})` : node.label, ...shapeOf(node.children)];
-  });
+  return nodes.flatMap((node) => [shapeLabel(node), ...shapeOf(node.children)]);
 }
 
 export function AstPanel({ baseline }: { baseline: string }) {
@@ -147,37 +175,51 @@ export function AstPanel({ baseline }: { baseline: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 border-b border-border px-3 py-2 text-[12px]">
+      <div className="flex shrink-0 items-start gap-1.5 border-b border-border px-3 py-2 text-[12px]">
         {parameterized ? (
-          <span className="text-perf-gain">
-            O valor chega como parâmetro (ParamRef). O que o usuário digitar entra dentro do nó: não
-            há texto dele no formato da consulta.
-          </span>
+          <>
+            <ShieldCheck aria-hidden className="mt-px size-3.5 shrink-0 text-perf-gain" />
+            <span className="text-perf-gain">
+              O valor chega como parâmetro (ParamRef). O que o usuário digitar entra dentro do nó:
+              não há texto dele no formato da consulta.
+            </span>
+          </>
         ) : added.length === 0 ? (
-          <span className="text-muted">
-            Mesmo formato da consulta de referência: o que mudou foram os valores.
-          </span>
+          <>
+            <Equal aria-hidden className="mt-px size-3.5 shrink-0 text-faint" />
+            <span className="text-muted">
+              Mesmo formato da consulta de referência: o que mudou foram os valores.
+            </span>
+          </>
         ) : (
-          <span className="text-sev-danger">
-            Nós que a aplicação nunca escreveu: {added.join(', ')}
-          </span>
+          <>
+            <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0 text-sev-critical" />
+            <span className="text-sev-critical">
+              Nós que a aplicação nunca escreveu: {added.join(', ')}
+            </span>
+          </>
         )}
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-2 divide-x divide-border overflow-auto">
-        <section className="p-3">
-          <h3 className="mb-2 text-[11px] uppercase tracking-wide text-faint">
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-auto p-2">
+        <section className="rounded-xl border border-border bg-surface-2/50 p-3">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-faint">
             O que a aplicação queria
           </h3>
           <Tree nodes={reference} />
         </section>
-        <section className="p-3">
-          <h3 className="mb-2 text-[11px] uppercase tracking-wide text-faint">
+        <section
+          className={`rounded-xl border p-3 transition-colors ${added.length > 0 && !parameterized ? 'border-sev-critical/35 bg-sev-critical/5' : 'border-border bg-surface-2/50'}`}
+        >
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-faint">
             O que o banco recebeu
           </h3>
           {'error' in current ? (
-            <p className="text-[12px] text-sev-danger">{current.error}</p>
+            <p className="flex items-start gap-1.5 text-[12px] text-sev-critical">
+              <CircleX aria-hidden className="mt-px size-3.5 shrink-0" />
+              {current.error}
+            </p>
           ) : (
-            <Tree nodes={current.tree} />
+            <Tree nodes={current.tree} injected={new Set(added)} />
           )}
         </section>
       </div>

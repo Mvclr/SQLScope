@@ -1,6 +1,19 @@
 'use client';
 
 import type { Finding, Report } from '@sqlscope/security-rules';
+import {
+  Check,
+  ChevronRight,
+  CircleCheck,
+  CircleX,
+  LoaderCircle,
+  Minus,
+  ShieldCheck,
+  TriangleAlert,
+  X,
+} from 'lucide-react';
+import { buttonClass } from '../ui/button';
+import { EmptyState } from '../ui/EmptyState';
 import { severityOrder, SeverityTag } from '../ui/Severity';
 import { useWorkspace } from './context';
 
@@ -21,8 +34,13 @@ export function ReportPanel() {
           type="button"
           onClick={() => void buildReport()}
           disabled={loading || status !== 'ready'}
-          className="rounded-md border border-accent px-2.5 py-1 text-[12px] text-accent hover:bg-accent hover:text-surface-0 disabled:opacity-50"
+          className={buttonClass('outline')}
         >
+          {loading ? (
+            <LoaderCircle aria-hidden className="animate-spin" />
+          ) : (
+            <ShieldCheck aria-hidden />
+          )}
           {loading ? 'Analisando…' : 'Analisar banco'}
         </button>
         {report.data && <Counts report={report.data} />}
@@ -32,16 +50,17 @@ export function ReportPanel() {
         {report.status === 'error' && (
           <p
             role="alert"
-            className="m-3 rounded-md border border-sev-critical/40 bg-sev-critical/10 p-3 text-[13px] text-sev-critical"
+            className="m-3 flex items-start gap-2 rounded-xl border border-sev-critical/30 bg-sev-critical/8 p-3 text-[13px] text-sev-critical"
           >
-            ✕ {report.error}
+            <CircleX aria-hidden className="mt-0.5 size-4 shrink-0" />
+            {report.error}
           </p>
         )}
         {report.data === null && report.status !== 'error' && (
-          <p className="p-4 text-[13px] text-muted">
+          <EmptyState icon={ShieldCheck}>
             Verifica chaves, índices, privilégios e isolamento — as mesmas regras que você usaria
             revisando um banco de verdade.
-          </p>
+          </EmptyState>
         )}
         {report.data && <Findings report={report.data} stale={report.stale} />}
       </div>
@@ -68,14 +87,16 @@ function Findings({ report, stale }: { report: Report; stale: boolean }) {
   return (
     <div className="p-3">
       {stale && (
-        <p className="mb-3 text-[12px] text-sev-warning">
-          △ O schema mudou desde este relatório. Analise de novo para atualizá-lo.
+        <p className="mb-3 flex items-center gap-1.5 text-[12px] text-sev-warning">
+          <TriangleAlert aria-hidden className="size-3.5 shrink-0" />O schema mudou desde este
+          relatório. Analise de novo para atualizá-lo.
         </p>
       )}
 
       {report.findings.length === 0 ? (
-        <p className="rounded-md border border-perf-gain/40 bg-perf-gain/10 p-3 text-[13px] text-perf-gain">
-          ✓ Nenhuma regra encontrou problemas neste banco.
+        <p className="flex items-center gap-2 rounded-xl border border-perf-gain/35 bg-perf-gain/8 p-3 text-[13px] text-perf-gain">
+          <CircleCheck aria-hidden className="size-4 shrink-0" />
+          Nenhuma regra encontrou problemas neste banco.
         </p>
       ) : (
         severityOrder.map((severity) => {
@@ -98,23 +119,24 @@ function Findings({ report, stale }: { report: Report; stale: boolean }) {
         })
       )}
 
-      <details className="mt-2 text-[12px] text-muted">
-        <summary className="cursor-pointer">Regras verificadas ({report.checks.length})</summary>
-        <ul className="mt-2 space-y-1">
+      <details className="group mt-2 text-[12px] text-muted">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-md py-0.5 hover:text-text">
+          <ChevronRight
+            aria-hidden
+            className="size-3.5 transition-transform duration-200 group-open:rotate-90"
+          />
+          Regras verificadas ({report.checks.length})
+        </summary>
+        <ul className="mt-2 space-y-1 pl-1">
           {report.checks.map((check) => (
-            <li key={check.rule.id} className="flex items-baseline gap-2">
-              <span
-                aria-hidden
-                className={
-                  check.status === 'pass'
-                    ? 'text-perf-gain'
-                    : check.status === 'skipped'
-                      ? 'text-faint'
-                      : 'text-sev-high'
-                }
-              >
-                {check.status === 'pass' ? '✓' : check.status === 'skipped' ? '–' : '✕'}
-              </span>
+            <li key={check.rule.id} className="flex items-center gap-2">
+              {check.status === 'pass' ? (
+                <Check aria-hidden className="size-3.5 shrink-0 text-perf-gain" />
+              ) : check.status === 'skipped' ? (
+                <Minus aria-hidden className="size-3.5 shrink-0 text-faint" />
+              ) : (
+                <X aria-hidden className="size-3.5 shrink-0 text-sev-high" />
+              )}
               <span className="font-mono text-[11px] text-faint">{check.rule.id}</span>
               <span>{check.rule.name}</span>
               {check.status === 'skipped' && (
@@ -138,7 +160,7 @@ function FindingCard({
   recommendation: string;
 }) {
   return (
-    <li className="rounded-md border border-border bg-surface-1 p-2.5">
+    <li className="rounded-xl border border-border bg-surface-1 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <SeverityTag severity={finding.severity} />
         <span className="text-[13px] font-medium">{name}</span>

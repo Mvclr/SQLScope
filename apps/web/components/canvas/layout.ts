@@ -2,8 +2,9 @@ import type { SchemaSnapshot, TableSnapshot } from '@sqlscope/core';
 import type { Point } from '../workspace/store';
 
 export const NODE_WIDTH = 260;
-const HEADER_HEIGHT = 38;
-const ROW_HEIGHT = 26;
+/** TableNode renders at exactly these sizes, so layouts can be computed before measuring. */
+export const HEADER_HEIGHT = 38;
+export const ROW_HEIGHT = 26;
 const GAP_X = 90;
 const GAP_Y = 36;
 

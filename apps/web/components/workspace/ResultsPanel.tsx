@@ -1,6 +1,8 @@
 'use client';
 
 import type { StatementResult } from '@sqlscope/engine';
+import { Check, CircleX, Globe, Server, Table2, TriangleAlert, X } from 'lucide-react';
+import { EmptyState, Kbd } from '../ui/EmptyState';
 import { useWorkspace } from './context';
 import { ResultGrid } from './ResultGrid';
 
@@ -28,11 +30,9 @@ export function ResultsPanel() {
 
   if (!run) {
     return (
-      <p className="p-4 text-[13px] text-muted">
-        Execute o script com <kbd className="rounded border border-border px-1 font-mono">Ctrl</kbd>
-        +<kbd className="rounded border border-border px-1 font-mono">Enter</kbd>. Os resultados
-        aparecem aqui.
-      </p>
+      <EmptyState icon={Table2}>
+        Execute o script com <Kbd>Ctrl</Kbd> + <Kbd>Enter</Kbd>. Os resultados aparecem aqui.
+      </EmptyState>
     );
   }
 
@@ -54,7 +54,7 @@ export function ResultsPanel() {
   return (
     <div className="flex h-full min-h-0">
       <ol
-        className="w-56 shrink-0 overflow-auto border-r border-border py-1"
+        className="w-56 shrink-0 space-y-0.5 overflow-auto border-r border-border p-1.5"
         aria-label="Statements executados"
       >
         {result.statements.map((s, i) => (
@@ -63,15 +63,14 @@ export function ResultsPanel() {
               type="button"
               onClick={() => selectStatement(i)}
               aria-current={i === selectedStatement}
-              className={`flex w-full flex-col items-start gap-0.5 px-3 py-1.5 text-left hover:bg-surface-2 ${i === selectedStatement ? 'bg-surface-2' : ''}`}
+              className={`flex w-full flex-col items-start gap-0.5 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-surface-2 ${i === selectedStatement ? 'bg-surface-2' : ''}`}
             >
               <span className="flex w-full items-center gap-1.5 text-[12px]">
-                <span
-                  aria-hidden
-                  className={s.status === 'ok' ? 'text-muted' : 'text-sev-critical'}
-                >
-                  {s.status === 'ok' ? '✓' : '✕'}
-                </span>
+                {s.status === 'ok' ? (
+                  <Check aria-hidden className="size-3.5 shrink-0 text-muted" />
+                ) : (
+                  <X aria-hidden className="size-3.5 shrink-0 text-sev-critical" />
+                )}
                 <span className={s.status === 'ok' ? 'text-text' : 'text-sev-critical'}>
                   {summary(s)}
                 </span>
@@ -86,7 +85,7 @@ export function ResultsPanel() {
           </li>
         ))}
         {result.skipped > 0 && (
-          <li className="px-3 py-1.5 text-[12px] text-faint">
+          <li className="px-2.5 py-1.5 text-[12px] text-faint">
             {result.skipped} não executado(s) após o erro
           </li>
         )}
@@ -94,17 +93,25 @@ export function ResultsPanel() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-border px-3 py-1.5 text-[12px] text-muted">
-          <span>
+          <span className="truncate tabular-nums">
             {result.statements.length} statement(s) · {Math.round(totalMs * 100) / 100} ms
           </span>
-          <span className="ml-auto text-faint">
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] text-faint">
+            {tier === 'T0' ? (
+              <Globe aria-hidden className="size-3" />
+            ) : (
+              <Server aria-hidden className="size-3" />
+            )}
             {tier === 'T0' ? 'PGlite · no navegador' : 'PostgreSQL · servidor'}
           </span>
         </div>
         {result.schemaUnknown && (
-          <p className="border-b border-border bg-sev-warning/10 px-3 py-1.5 text-[12px] text-sev-warning">
-            △ A transação está em estado de erro: o schema só pode ser lido de novo após{' '}
-            <code className="font-mono">ROLLBACK</code>.
+          <p className="flex items-center gap-1.5 border-b border-border bg-sev-warning/10 px-3 py-1.5 text-[12px] text-sev-warning">
+            <TriangleAlert aria-hidden className="size-3.5 shrink-0" />
+            <span>
+              A transação está em estado de erro: o schema só pode ser lido de novo após{' '}
+              <code className="font-mono">ROLLBACK</code>.
+            </span>
           </p>
         )}
         <div className="min-h-0 flex-1">
@@ -131,8 +138,9 @@ function StatementDetail({ statement }: { statement: StatementResult }) {
   return (
     <div className="flex h-full flex-col">
       {output.truncated && (
-        <p className="border-b border-border px-3 py-1 text-[12px] text-sev-warning">
-          △ Mostrando {output.rows.length} linhas — limite de{' '}
+        <p className="flex items-center gap-1.5 border-b border-border px-3 py-1 text-[12px] text-sev-warning">
+          <TriangleAlert aria-hidden className="size-3.5 shrink-0" />
+          Mostrando {output.rows.length} linhas — limite de{' '}
           {output.truncated === 'rows' ? 'linhas' : 'tamanho'} da sessão.
         </p>
       )}
@@ -155,11 +163,14 @@ function ErrorCard({
   return (
     <div
       role="alert"
-      className="rounded-md border border-sev-critical/40 bg-sev-critical/10 p-3 text-[13px]"
+      className="flex gap-2.5 rounded-xl border border-sev-critical/30 bg-sev-critical/8 p-3 text-[13px]"
     >
-      <p className="font-medium text-sev-critical">✕ {title}</p>
-      {message && <p className="mt-1 text-text">{message}</p>}
-      {hint && <p className="mt-1 text-muted">Dica: {hint}</p>}
+      <CircleX aria-hidden className="mt-0.5 size-4 shrink-0 text-sev-critical" />
+      <div className="min-w-0">
+        <p className="font-medium text-sev-critical">{title}</p>
+        {message && <p className="mt-1 text-text">{message}</p>}
+        {hint && <p className="mt-1 text-muted">Dica: {hint}</p>}
+      </div>
     </div>
   );
 }

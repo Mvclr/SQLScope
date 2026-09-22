@@ -1,8 +1,10 @@
 'use client';
 
 import type { Lab } from '@sqlscope/labs';
+import { ChevronLeft, ChevronRight, Eye, FlaskConical } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from 'zustand';
+import { buttonClass } from '../ui/button';
 import type { WorkspaceStore } from '../workspace/store';
 
 /**
@@ -24,43 +26,61 @@ export function StepsPanel({ lab, store }: { lab: Lab; store: WorkspaceStore }) 
   };
 
   return (
-    <div className="shrink-0 border-b border-border bg-surface-2/40 px-4 py-3">
-      <div className="flex items-baseline gap-3">
-        <h2 className="text-[14px] font-semibold text-text">{lab.title}</h2>
-        <span className="text-[12px] text-faint">
+    <div className="px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-accent/12 text-accent">
+          <FlaskConical aria-hidden className="size-3.5" />
+        </span>
+        <h2 className="min-w-0 text-[14px] font-semibold text-text">{lab.title}</h2>
+        <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] tabular-nums text-muted">
           {index < 0 ? 'introdução' : `passo ${index + 1} de ${lab.steps.length}`}
         </span>
-        <div className="ml-auto flex gap-1">
+        <div className="ml-auto flex shrink-0 gap-1">
           <button
             type="button"
             onClick={() => go(index - 1)}
             disabled={index < 0}
-            className="rounded-md border border-border px-2 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-text disabled:opacity-40"
+            className={buttonClass('secondary')}
           >
-            ← Anterior
+            <ChevronLeft aria-hidden />
+            Anterior
           </button>
           <button
             type="button"
             onClick={() => go(index + 1)}
             disabled={index >= lab.steps.length - 1}
-            className="rounded-md bg-accent px-2.5 py-1 text-[12px] font-medium text-surface-0 hover:opacity-90 disabled:opacity-40"
+            className={buttonClass('primary')}
           >
-            {index < 0 ? 'Começar' : 'Próximo →'}
+            {index < 0 ? 'Começar' : 'Próximo'}
+            <ChevronRight aria-hidden />
           </button>
         </div>
       </div>
 
+      {/* Where the learner is in the arc: one segment per step, filled as they go. */}
+      <ol aria-hidden className="mt-3 flex gap-1">
+        {lab.steps.map((_, i) => (
+          <li
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= index ? 'bg-accent' : 'bg-surface-3'}`}
+          />
+        ))}
+      </ol>
+
       {step ? (
-        <div className="mt-2 space-y-1.5 text-[13px]">
+        <div key={index} className="rise mt-3 space-y-1.5 text-[13px]">
           <p className="font-medium text-text">{step.title}</p>
           <p className="text-muted">{step.brief}</p>
-          <p className="text-[12px] text-faint">
-            <span className="text-structure">O que observar: </span>
-            {step.expect}
+          <p className="flex items-start gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] text-muted">
+            <Eye aria-hidden className="mt-0.5 size-3.5 shrink-0 text-structure" />
+            <span>
+              <span className="font-medium text-structure">O que observar: </span>
+              {step.expect}
+            </span>
           </p>
         </div>
       ) : (
-        <p className="mt-2 max-w-3xl text-[13px] text-muted">{lab.premise}</p>
+        <p className="mt-3 max-w-3xl text-[13px] text-muted">{lab.premise}</p>
       )}
     </div>
   );

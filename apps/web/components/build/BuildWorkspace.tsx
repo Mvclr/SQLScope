@@ -1,9 +1,11 @@
 'use client';
 
+import { Timer, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { readProject } from '../../lib/account';
+import { buttonClass } from '../ui/button';
 import { apiBackend, endSession, type SessionInfo } from '../workspace/api-backend';
 import { createWorkspaceStore, type WorkspaceStore } from '../workspace/store';
 import { Workspace } from '../workspace/Workspace';
@@ -38,12 +40,10 @@ export function BuildWorkspace() {
       store={store}
       openingLabel="Criando seu banco no servidor…"
       actions={
-        <>
-          <div className="ml-auto flex items-center gap-3">
-            <SaveProjectButton store={store} />
-            <SessionControls store={store} session={session} />
-          </div>
-        </>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <SaveProjectButton store={store} />
+          <SessionControls store={store} session={session} />
+        </div>
       }
     />
   );
@@ -107,9 +107,13 @@ function SessionControls({
   const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
   return (
-    <div className="flex items-center gap-3 text-[12px] text-muted">
-      <span title="Sem atividade por este tempo, o banco é descartado">
-        Sessão expira em <span className="tabular-nums text-text">{clock}</span>
+    <div className="flex items-center gap-2 text-[12px] text-muted">
+      <span
+        className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5"
+        title="Sem atividade por este tempo, o banco é descartado"
+      >
+        <Timer aria-hidden className="size-3.5 text-faint" />
+        Expira em <span className="font-medium tabular-nums text-text">{clock}</span>
       </span>
       <button
         type="button"
@@ -117,9 +121,10 @@ function SessionControls({
           await endSession();
           await store.getState().reset();
         }}
-        className="rounded-md border border-border px-2.5 py-1 hover:bg-surface-2 hover:text-text"
+        className={buttonClass('secondary')}
         title="Descarta o banco atual e cria outro vazio"
       >
+        <Trash2 aria-hidden />
         Descartar e recomeçar
       </button>
     </div>

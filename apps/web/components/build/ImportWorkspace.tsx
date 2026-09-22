@@ -1,6 +1,8 @@
 'use client';
 
+import { Eraser } from 'lucide-react';
 import { useState } from 'react';
+import { buttonClass } from '../ui/button';
 import { pgliteBackend } from '../workspace/pglite-backend';
 import { createWorkspaceStore } from '../workspace/store';
 import { Workspace } from '../workspace/Workspace';
@@ -30,8 +32,9 @@ export function ImportWorkspace() {
         <button
           type="button"
           onClick={() => void store.getState().reset()}
-          className="ml-auto rounded-md border border-border px-2.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-text"
+          className={buttonClass('secondary', 'sm', 'ml-auto')}
         >
+          <Eraser aria-hidden />
           Limpar banco
         </button>
       }

@@ -79,12 +79,10 @@ export function SplitPane({
       ref={container}
       className={`flex h-full min-h-0 w-full min-w-0 ${horizontal ? 'flex-row' : 'flex-col'}`}
     >
-      <div
-        className="min-h-0 min-w-0 overflow-hidden"
-        style={{ flexBasis: `${ratio * 100}%`, flexShrink: 0 }}
-      >
+      <div className="min-h-0 min-w-0" style={{ flexBasis: `${ratio * 100}%`, flexShrink: 0 }}>
         {first}
       </div>
+      {/* The gap between two blocks is the handle: no line of its own, just a grip. */}
       <div
         role="separator"
         aria-orientation={horizontal ? 'vertical' : 'horizontal'}
@@ -94,9 +92,14 @@ export function SplitPane({
         tabIndex={0}
         onPointerDown={onPointerDown}
         onKeyDown={onKeyDown}
-        className={`shrink-0 bg-border transition-colors hover:bg-accent focus-visible:bg-accent ${horizontal ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize'}`}
-      />
-      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{second}</div>
+        className={`group relative flex shrink-0 touch-none items-center justify-center rounded-full outline-offset-0 ${horizontal ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize'}`}
+      >
+        <span
+          aria-hidden
+          className={`rounded-full bg-border-strong transition-all duration-200 group-hover:bg-accent group-focus-visible:bg-accent group-active:bg-accent ${horizontal ? 'h-8 w-[3px] group-hover:h-14' : 'h-[3px] w-8 group-hover:w-14'}`}
+        />
+      </div>
+      <div className="min-h-0 min-w-0 flex-1">{second}</div>
     </div>
   );
 }

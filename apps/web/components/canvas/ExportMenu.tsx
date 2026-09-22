@@ -2,7 +2,17 @@
 
 import { toDbml, toDdl } from '@sqlscope/core/export';
 import { getNodesBounds, getViewportForBounds, useReactFlow } from '@xyflow/react';
-import { useState } from 'react';
+import {
+  ChevronDown,
+  Download,
+  FileCode2,
+  ImageDown,
+  LoaderCircle,
+  Network,
+  type LucideIcon,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { buttonClass } from '../ui/button';
 import { useWorkspace } from '../workspace/context';
 
 const PNG_WIDTH = 1600;
@@ -30,6 +40,22 @@ export function ExportMenu() {
   const { getNodes } = useReactFlow();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+
+  // A menu floating over the diagram closes like any other: Escape or a click elsewhere.
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
   const exportPng = async () => {
     setBusy(true);
@@ -43,7 +69,7 @@ export function ExportMenu() {
       const { toPng } = await import('html-to-image');
       const style = getComputedStyle(document.documentElement);
       const dataUrl = await toPng(element, {
-        backgroundColor: style.getPropertyValue('--surface-0').trim(),
+        backgroundColor: style.getPropertyValue('--canvas').trim(),
         width: PNG_WIDTH,
         height: PNG_HEIGHT,
         style: {
@@ -62,26 +88,31 @@ export function ExportMenu() {
     }
   };
 
-  const items: [string, () => void][] = [
-    ['SQL (DDL)', () => download('schema.sql', toDdl(snapshot), 'application/sql')],
-    ['DBML (dbdiagram.io)', () => download('schema.dbml', toDbml(snapshot), 'text/plain')],
-    ['Imagem (PNG)', () => void exportPng()],
+  const items: [string, LucideIcon, () => void][] = [
+    ['SQL (DDL)', FileCode2, () => download('schema.sql', toDdl(snapshot), 'application/sql')],
+    ['DBML (dbdiagram.io)', Network, () => download('schema.dbml', toDbml(snapshot), 'text/plain')],
+    ['Imagem (PNG)', ImageDown, () => void exportPng()],
   ];
 
   return (
-    <div className="relative">
+    <div ref={root} className="relative">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         disabled={snapshot.tables.length === 0 || busy}
-        className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[12px] text-muted hover:bg-surface-3 hover:text-text disabled:opacity-50"
+        className={buttonClass('ghost')}
       >
-        {busy ? 'Exportando…' : 'Exportar ▾'}
+        {busy ? <LoaderCircle aria-hidden className="animate-spin" /> : <Download aria-hidden />}
+        {busy ? 'Exportando…' : 'Exportar'}
+        <ChevronDown
+          aria-hidden
+          className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
       </button>
       {open && (
-        <ul className="absolute right-0 z-10 mt-1 w-56 overflow-hidden rounded-md border border-border bg-surface-1 shadow-lg">
-          {items.map(([label, action]) => (
+        <ul className="rise absolute right-0 top-full z-10 mt-2 w-56 rounded-xl border border-border bg-surface-1 p-1 shadow-[var(--elevation-2)]">
+          {items.map(([label, Icon, action]) => (
             <li key={label}>
               <button
                 type="button"
@@ -89,8 +120,9 @@ export function ExportMenu() {
                   action();
                   if (!label.includes('PNG')) setOpen(false);
                 }}
-                className="block w-full px-3 py-2 text-left text-[12px] hover:bg-surface-2"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[12px] text-text transition-colors hover:bg-surface-2"
               >
+                <Icon aria-hidden className="size-3.5 text-faint" />
                 {label}
               </button>
             </li>

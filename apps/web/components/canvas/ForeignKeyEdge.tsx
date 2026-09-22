@@ -19,7 +19,7 @@ export interface ForeignKeyEdgeData extends Record<string, unknown> {
 export type ForeignKeyEdgeType = Edge<ForeignKeyEdgeData, 'foreignKey'>;
 
 const cardinality =
-  'pointer-events-none absolute rounded bg-surface-0 px-1 font-mono text-[10px] text-structure';
+  'pointer-events-none absolute rounded-md border border-border bg-surface-1 px-1 font-mono text-[10px] leading-4 text-structure';
 
 /** Referenced (parent) column on the left, referencing (child) column on the right. */
 export function ForeignKeyEdge(props: EdgeProps<ForeignKeyEdgeType>) {
@@ -46,13 +46,13 @@ export function ForeignKeyEdge(props: EdgeProps<ForeignKeyEdgeType>) {
       <EdgeLabelRenderer>
         <span
           className={cardinality}
-          style={{ transform: `translate(${sourceX + 6}px, ${sourceY - 16}px)` }}
+          style={{ transform: `translate(${sourceX + 6}px, ${sourceY - 21}px)` }}
         >
           1
         </span>
         <span
           className={cardinality}
-          style={{ transform: `translate(${targetX - 16}px, ${targetY - 16}px)` }}
+          style={{ transform: `translate(${targetX - 18}px, ${targetY - 21}px)` }}
           title={data?.label}
         >
           {data?.oneToOne ? '1' : 'N'}

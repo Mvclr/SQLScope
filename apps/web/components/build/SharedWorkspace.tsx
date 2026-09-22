@@ -1,7 +1,9 @@
 'use client';
 
+import { Link2, LoaderCircle, Unlink } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { decodeShare } from '../../lib/share';
+import { EmptyState } from '../ui/EmptyState';
 import { pgliteBackend } from '../workspace/pglite-backend';
 import { createWorkspaceStore, type WorkspaceStore } from '../workspace/store';
 import { Workspace } from '../workspace/Workspace';
@@ -58,19 +60,28 @@ export function SharedWorkspace() {
 
   if (stage.name === 'invalid') {
     return (
-      <div className="mx-auto max-w-xl px-6 py-16 text-center">
-        <h1 className="text-[18px] font-semibold">Link inválido</h1>
-        <p className="mt-2 text-muted">
-          Este link não contém uma sessão que possamos abrir. Ele pode ter sido cortado ao ser
-          copiado.
-        </p>
+      <div className="mx-auto max-w-md px-4 py-16">
+        <div className="bento rise">
+          <EmptyState icon={Unlink}>
+            <h1 className="text-[16px] font-semibold text-text">Link inválido</h1>
+            <p className="mt-1">
+              Este link não contém uma sessão que possamos abrir. Ele pode ter sido cortado ao ser
+              copiado.
+            </p>
+          </EmptyState>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex h-full flex-col">
-      <p className="shrink-0 border-b border-border bg-surface-2/50 px-4 py-2 text-[12px] text-muted">
+      <p className="bento mx-2 mb-2 flex shrink-0 items-center gap-2 px-3 py-2 text-[12px] text-muted">
+        {stage.name === 'ready' ? (
+          <Link2 aria-hidden className="size-3.5 shrink-0 text-accent" />
+        ) : (
+          <LoaderCircle aria-hidden className="size-3.5 shrink-0 animate-spin text-accent" />
+        )}
         {stage.name === 'ready'
           ? 'Sessão compartilhada, reconstruída no seu navegador. Ela é sua: execute o que quiser.'
           : stage.name === 'replaying'

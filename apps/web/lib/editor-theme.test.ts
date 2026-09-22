@@ -7,6 +7,9 @@ describe('hexOrFallback', () => {
     ['  #11161B  ', '11161b'],
     ['11161b', '11161b'],
     ['#11161bff', '11161bff'],
+    // What the CSS minifier makes of #ffffff and #00000000.
+    ['#fff', 'ffffff'],
+    ['#0000', '00000000'],
   ])('accepts %s', (value, expected) => {
     expect(hexOrFallback(value, 'fallback')).toBe(expected);
   });
@@ -15,7 +18,7 @@ describe('hexOrFallback', () => {
   // cannot destructure them.
   it.each<[string | undefined, string]>([
     // What Monaco rejects, and what took the editor down in practice.
-    ['#fff', 'a three-digit hex'],
+    ['#ffff0', 'a five-digit hex'],
     ['', 'a variable that resolved to nothing'],
     ['#', 'a variable stripped mid-reload'],
     ['rgb(17, 22, 27)', 'a non-hex colour'],
@@ -51,7 +54,7 @@ describe('editorPalette', () => {
   });
 
   it.each([true, false])('never yields a colour Monaco rejects (dark: %s)', (dark) => {
-    const palette = editorPalette(() => '#fff', dark);
+    const palette = editorPalette(() => 'rgb(17, 22, 27)', dark);
 
     for (const colour of Object.values(palette)) expect(colour).toMatch(/^[0-9a-f]{6}$/);
   });

@@ -1,7 +1,10 @@
 'use client';
 
+import { Check, History, LoaderCircle, Play, Share2, Undo2, X } from 'lucide-react';
 import { useState } from 'react';
 import { shareLink } from '../../lib/share';
+import { buttonClass } from '../ui/button';
+import { EmptyState } from '../ui/EmptyState';
 import { useWorkspace } from './context';
 
 const time = new Intl.DateTimeFormat('pt-BR', {
@@ -25,12 +28,18 @@ export function HistoryPanel() {
   const setSql = useWorkspace((s) => s.setSql);
   const timeTravelTo = useWorkspace((s) => s.timeTravelTo);
 
-  if (runs.length === 0) return <p className="p-4 text-[13px] text-muted">Nada executado ainda.</p>;
+  if (runs.length === 0) {
+    return (
+      <EmptyState icon={History}>
+        Nada executado ainda. Cada execução fica aqui, com o schema daquele momento.
+      </EmptyState>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
       <Toolbar />
-      <ol className="min-h-0 flex-1 overflow-auto py-1">
+      <ol className="min-h-0 flex-1 space-y-0.5 overflow-auto p-1.5">
         {[...runs].reverse().map((run) => {
           const failed =
             run.result.syntaxError || run.result.statements.some((s) => s.status === 'error');
@@ -38,17 +47,24 @@ export function HistoryPanel() {
           return (
             <li
               key={run.id}
-              className={`group border-b border-border/50 ${run.id === selectedRun ? 'bg-surface-2' : ''}`}
+              className={`group rounded-lg transition-colors hover:bg-surface-2 ${run.id === selectedRun ? 'bg-surface-2' : ''}`}
             >
               <button
                 type="button"
                 onClick={() => selectRun(run.id)}
-                className="w-full px-3 py-2 text-left hover:bg-surface-2"
+                className="w-full rounded-lg px-2.5 py-2 text-left"
               >
                 <span className="flex items-center gap-2 text-[12px]">
                   <span className="tabular-nums text-faint">{time.format(run.at)}</span>
-                  <span className={failed ? 'text-sev-critical' : 'text-muted'}>
-                    {failed ? '✕ falhou' : `✓ ${run.result.statements.length} statement(s)`}
+                  <span
+                    className={`inline-flex items-center gap-1 ${failed ? 'text-sev-critical' : 'text-muted'}`}
+                  >
+                    {failed ? (
+                      <X aria-hidden className="size-3.5" />
+                    ) : (
+                      <Check aria-hidden className="size-3.5" />
+                    )}
+                    {failed ? 'falhou' : `${run.result.statements.length} statement(s)`}
                   </span>
                   {changes > 0 && (
                     <span className="text-accent">· {changes} mudança(s) no schema</span>
@@ -58,19 +74,21 @@ export function HistoryPanel() {
                   {run.sql.trim().split('\n')[0]}
                 </span>
               </button>
-              <div className="flex gap-3 px-3 pb-2 text-[11px] opacity-0 focus-within:opacity-100 group-hover:opacity-100">
+              <div className="flex gap-3 px-2.5 pb-2 text-[11px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                 <button
                   type="button"
                   onClick={() => setSql(run.sql)}
-                  className="text-structure hover:underline"
+                  className="inline-flex items-center gap-1 text-structure hover:underline"
                 >
+                  <Undo2 aria-hidden className="size-3" />
                   Trazer de volta para o editor
                 </button>
                 <button
                   type="button"
                   onClick={() => timeTravelTo(viewing?.runId === run.id ? null : run.id)}
-                  className="text-structure hover:underline"
+                  className="inline-flex items-center gap-1 text-structure hover:underline"
                 >
+                  <History aria-hidden className="size-3" />
                   {viewing?.runId === run.id
                     ? 'Voltar ao schema atual'
                     : 'Ver o schema deste momento'}
@@ -128,15 +146,13 @@ function Toolbar() {
           type="button"
           onClick={() => void replay()}
           disabled={replaying || runs.length === 0}
-          className="rounded-md border border-border px-2.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-text disabled:opacity-50"
+          className={buttonClass('secondary')}
         >
-          {replaying ? 'Reproduzindo…' : '▶ Reproduzir a sessão'}
+          {replaying ? <LoaderCircle aria-hidden className="animate-spin" /> : <Play aria-hidden />}
+          {replaying ? 'Reproduzindo…' : 'Reproduzir a sessão'}
         </button>
-        <button
-          type="button"
-          onClick={() => void share()}
-          className="rounded-md border border-border px-2.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-text"
-        >
+        <button type="button" onClick={() => void share()} className={buttonClass('secondary')}>
+          <Share2 aria-hidden />
           Compartilhar
         </button>
         {message && <span className="text-[12px] text-muted">{message}</span>}
@@ -147,7 +163,7 @@ function Toolbar() {
           value={link}
           onFocus={(event) => event.currentTarget.select()}
           aria-label="Link da sessão"
-          className="mt-2 w-full rounded border border-border bg-surface-2 px-2 py-1 font-mono text-[11px] text-muted"
+          className="mt-2 w-full rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-[11px] text-muted"
         />
       )}
     </div>
