@@ -2,6 +2,16 @@ import { z } from 'zod';
 
 const minutes = (fallback: number) => z.coerce.number().int().positive().default(fallback);
 
+/**
+ * Secrets that live in the repository — the compose fallback and the `.env.example`
+ * placeholder — so the stack boots locally. Any of them signs cookies an attacker could
+ * forge, so a production process refuses to start with one (see the refinement below).
+ */
+const KNOWN_SECRETS = new Set([
+  'dev-only-session-secret-change-me-0123456789',
+  'replace-with-at-least-32-random-characters',
+]);
+
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -34,13 +44,28 @@ const schema = z.object({
   RESULT_MAX_BYTES: z.coerce.number().int().positive().default(2_000_000),
 });
 
-export type Config = z.infer<typeof schema>;
+/**
+ * A production deployment must not run on a secret that ships in the repository: anyone
+ * could sign a session or account cookie with it. Development and tests may, so the check
+ * only fires in production.
+ */
+const validated = schema.superRefine((config, ctx) => {
+  if (config.NODE_ENV === 'production' && KNOWN_SECRETS.has(config.SESSION_SECRET)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['SESSION_SECRET'],
+      message: 'SESSION_SECRET is a known default; set a unique random value in production.',
+    });
+  }
+});
+
+export type Config = z.infer<typeof validated>;
 
 export const CONFIG = Symbol('CONFIG');
 
 /** Validates the environment once at startup; a misconfigured process refuses to boot. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const parsed = schema.safeParse(env);
+  const parsed = validated.safeParse(env);
   if (!parsed.success) {
     throw new Error(`Invalid configuration:\n${z.prettifyError(parsed.error)}`);
   }

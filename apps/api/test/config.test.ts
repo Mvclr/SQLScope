@@ -29,6 +29,15 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...valid, SESSION_SECRET: 'short' })).toThrow(/SESSION_SECRET/);
   });
 
+  it('refuses a known default secret in production', () => {
+    const secret = 'dev-only-session-secret-change-me-0123456789';
+    expect(() => loadConfig({ ...valid, NODE_ENV: 'production', SESSION_SECRET: secret })).toThrow(
+      /SESSION_SECRET/,
+    );
+    // The same secret is fine outside production, where the stack is not exposed.
+    expect(loadConfig({ ...valid, SESSION_SECRET: secret }).SESSION_SECRET).toBe(secret);
+  });
+
   it('rejects malformed URLs', () => {
     expect(() => loadConfig({ ...valid, REDIS_URL: 'not a url' })).toThrow(/REDIS_URL/);
   });

@@ -24,7 +24,12 @@ Ambiente interativo para construir, visualizar, analisar e proteger bancos de da
 
 Requisitos: Docker e, para desenvolvimento, Node.js ≥ 22.12 com corepack habilitado.
 
+Copie `.env.example` para `.env` e defina um `SESSION_SECRET` único — a API sobe como
+produção e recusa iniciar com um segredo que vem no repositório:
+
 ```bash
+cp .env.example .env
+# edite .env e gere um SESSION_SECRET, p.ex. openssl rand -base64 32
 docker compose up --build
 ```
 

@@ -26,7 +26,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TRUST_PROXY: 1
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
-      SESSION_SECRET: ${SESSION_SECRET:-dev-only-session-secret-change-me-0123456789}
+      # No fallback on purpose: this service runs as NODE_ENV=production, and a secret from
+      # the repository would let anyone forge signed cookies. Set it in .env (see .env.example).
+      SESSION_SECRET: ${SESSION_SECRET:?defina um SESSION_SECRET forte no .env — veja .env.example}
       CONTROL_DATABASE_URL: postgres://sqlscope:${CONTROL_DB_PASSWORD:-sqlscope}@postgres-control:5432/sqlscope
       SANDBOX_DATABASE_URL: postgres://sqlscope_provisioner:${SANDBOX_PROVISIONER_PASSWORD:-sandbox-provisioner}@postgres-sandbox:5432/postgres
       REDIS_URL: redis://:${REDIS_PASSWORD:-sqlscope}@redis:6379
