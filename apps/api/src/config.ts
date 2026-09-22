@@ -21,8 +21,11 @@ const schema = z.object({
    * client address (Express `trust proxy`). 0 when clients connect directly.
    */
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
-  /** Mark the session cookie Secure. On for any deployment served over HTTPS. */
-  COOKIE_SECURE: z.stringbool().default(false),
+  /**
+   * Mark the session and account cookies Secure. Defaults to on in production (see the
+   * transform below); set it explicitly to serve over plain HTTP, as the local stack does.
+   */
+  COOKIE_SECURE: z.stringbool().optional(),
   /** Signs the session cookie and salts client address hashes. */
   SESSION_SECRET: z.string().min(32),
   /** SQLScope's own database. Never receives user SQL (concept §24). */
@@ -49,15 +52,22 @@ const schema = z.object({
  * could sign a session or account cookie with it. Development and tests may, so the check
  * only fires in production.
  */
-const validated = schema.superRefine((config, ctx) => {
-  if (config.NODE_ENV === 'production' && KNOWN_SECRETS.has(config.SESSION_SECRET)) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['SESSION_SECRET'],
-      message: 'SESSION_SECRET is a known default; set a unique random value in production.',
-    });
-  }
-});
+const validated = schema
+  .superRefine((config, ctx) => {
+    if (config.NODE_ENV === 'production' && KNOWN_SECRETS.has(config.SESSION_SECRET)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SESSION_SECRET'],
+        message: 'SESSION_SECRET is a known default; set a unique random value in production.',
+      });
+    }
+  })
+  .transform((config) => ({
+    ...config,
+    // Secure by default in production so a deployment that forgets the flag still gets it;
+    // an explicit value wins, which is how the local HTTP stack keeps it off.
+    COOKIE_SECURE: config.COOKIE_SECURE ?? config.NODE_ENV === 'production',
+  }));
 
 export type Config = z.infer<typeof validated>;
 

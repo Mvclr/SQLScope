@@ -41,4 +41,21 @@ describe('loadConfig', () => {
   it('rejects malformed URLs', () => {
     expect(() => loadConfig({ ...valid, REDIS_URL: 'not a url' })).toThrow(/REDIS_URL/);
   });
+
+  it('marks cookies Secure by default in production', () => {
+    const secret = 'x'.repeat(40);
+    expect(
+      loadConfig({ ...valid, SESSION_SECRET: secret, NODE_ENV: 'production' }).COOKIE_SECURE,
+    ).toBe(true);
+    // Development keeps them off, and an explicit value wins in either environment.
+    expect(loadConfig(valid).COOKIE_SECURE).toBe(false);
+    expect(
+      loadConfig({
+        ...valid,
+        SESSION_SECRET: secret,
+        NODE_ENV: 'production',
+        COOKIE_SECURE: 'false',
+      }).COOKIE_SECURE,
+    ).toBe(false);
+  });
 });
