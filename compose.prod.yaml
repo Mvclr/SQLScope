@@ -1,0 +1,54 @@
+# Production overlay: runs the images published by .github/workflows/release.yml instead of
+# building anything on the server.
+#
+#   docker compose -f compose.yaml -f compose.prod.yaml up --detach --wait
+#
+# The overlay keeps the topology of compose.yaml untouched — same networks, same isolation
+# between the control database and the sandbox cluster (ADR 0001). It changes three things:
+# where the images come from, that services come back after a reboot, and that logs cannot
+# grow until they fill a small disk.
+#
+# Images are multi-architecture, so the same tag runs on an x86 VPS and on an Ampere ARM
+# instance. See docs/DEPLOY.md.
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: '10m', max-file: '3' }
+
+services:
+  web:
+    build: !reset null
+    image: ${SQLSCOPE_IMAGE_PREFIX:-ghcr.io/mvclr/sqlscope}-web:${SQLSCOPE_VERSION:-edge}
+    # The browser reaches this service directly: apps/web/middleware.ts strips the client's
+    # own X-Forwarded-For so the API sees an address it can trust. Putting a reverse proxy
+    # in front of this port is not a configuration change — read that file first.
+    ports: !override ['${WEB_PUBLIC_PORT:-80}:3000']
+    restart: unless-stopped
+    logging: *logging
+
+  api:
+    build: !reset null
+    image: ${SQLSCOPE_IMAGE_PREFIX:-ghcr.io/mvclr/sqlscope}-api:${SQLSCOPE_VERSION:-edge}
+    restart: unless-stopped
+    logging: *logging
+
+  migrate:
+    build: !reset null
+    image: ${SQLSCOPE_IMAGE_PREFIX:-ghcr.io/mvclr/sqlscope}-api-migrate:${SQLSCOPE_VERSION:-edge}
+    # One-shot by design: it applies the migrations and exits.
+    restart: 'no'
+    logging: *logging
+
+  postgres-control:
+    restart: unless-stopped
+    logging: *logging
+
+  # Kept disposable on purpose (ADR 0001): a restart wipes every session database, which is
+  # the intended behaviour, not a loss.
+  postgres-sandbox:
+    restart: unless-stopped
+    logging: *logging
+
+  redis:
+    restart: unless-stopped
+    logging: *logging
