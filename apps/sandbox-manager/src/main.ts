@@ -7,6 +7,7 @@ import { systemClock } from './log.js';
 import { limitsFrom } from './provider/docker/container-spec.js';
 import { DockerClient } from './provider/docker/docker-client.js';
 import { DockerProvider } from './provider/docker/docker-provider.js';
+import { Reconciler } from './reconcile/reconciler.js';
 import { migrate } from './store/migrate.js';
 import { PgStore } from './store/pg-store.js';
 
@@ -44,12 +45,24 @@ const scheduler = new Scheduler(
   systemClock,
   log,
 );
+const reconciler = new Reconciler(
+  store,
+  provider,
+  scheduler,
+  {
+    provisionTimeoutMs: config.PROVISION_TIMEOUT_SECONDS * 1000,
+    readyClaimMs: config.READY_CLAIM_SECONDS * 1000,
+  },
+  systemClock,
+  log,
+);
 
 const app = buildApp({
   config,
   logger: log,
   store,
   scheduler,
+  afterRelease: () => void reconciler.trigger(),
   checks: [
     { name: 'state-database', check: () => store.ping() },
     { name: 'docker', check: () => docker.ping() },
@@ -62,6 +75,7 @@ async function shutdown(signal: string): Promise<void> {
   stopping = true;
   log.info(`${signal} received, shutting down`);
   await app.close();
+  await reconciler.stop();
   // A provisioning cut short would leave its record for the next process to fail as
   // stuck; letting it finish is cheaper, and bounded by PROVISION_TIMEOUT_SECONDS.
   await scheduler.drain();
@@ -72,3 +86,4 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
 }
 
 await app.listen({ port: config.PORT, host: '0.0.0.0' });
+reconciler.start(config.RECONCILE_INTERVAL_MS);
