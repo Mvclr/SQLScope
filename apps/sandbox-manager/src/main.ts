@@ -1,17 +1,29 @@
 import pg from 'pg';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
+import { migrate } from './store/migrate.js';
+import { PgStore } from './store/pg-store.js';
 
 const config = loadConfig();
 
-const pool = new pg.Pool({ connectionString: config.STATE_DATABASE_URL, max: 10 });
+const pool = new pg.Pool({
+  connectionString: config.STATE_DATABASE_URL,
+  max: 10,
+  // A database that stops answering must surface as an error, not a hung promise: the
+  // reconciliation loop falls back to the container labels when it does (ADR 0002).
+  connectionTimeoutMillis: 3_000,
+  query_timeout: 10_000,
+});
 // An idle client that loses its connection emits here; without a listener it crashes the
 // process. The next query simply opens a new connection.
 pool.on('error', () => {});
 
+await migrate(pool);
+const store = new PgStore(pool);
+
 const app = buildApp({
   config,
-  checks: [{ name: 'state-database', check: async () => void (await pool.query('select 1')) }],
+  checks: [{ name: 'state-database', check: () => store.ping() }],
 });
 
 let stopping = false;
