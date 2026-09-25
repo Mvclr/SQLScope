@@ -4,8 +4,9 @@
 
 Ambiente interativo para construir, visualizar, analisar e proteger bancos de dados relacionais — com SQL executado em PostgreSQL real e isolado, e cada efeito mostrado visualmente.
 
-> **Status:** Fases 1 e 2 completas e os labs de segurança da Fase 3 no ar; faltam o sandbox
-> T2 e o deploy público. Ver o [roadmap](docs/ROADMAP.md).
+> **Status:** Fases 1 e 2 completas; da Fase 3, os labs de segurança estão no ar e o
+> sandbox-manager do T2 está pronto, sem lab que o use ainda. Falta o deploy público. Ver o
+> [roadmap](docs/ROADMAP.md).
 
 ## O que dá para fazer
 
@@ -24,12 +25,13 @@ Ambiente interativo para construir, visualizar, analisar e proteger bancos de da
 
 Requisitos: Docker e, para desenvolvimento, Node.js ≥ 22.12 com corepack habilitado.
 
-Copie `.env.example` para `.env` e defina um `SESSION_SECRET` único — a API sobe como
-produção e recusa iniciar com um segredo que vem no repositório:
+Copie `.env.example` para `.env` e defina um `SESSION_SECRET` e um `SANDBOX_MANAGER_TOKEN`
+únicos — a API e o sandbox-manager sobem como produção e recusam iniciar com um segredo que
+vem no repositório:
 
 ```bash
 cp .env.example .env
-# edite .env e gere um SESSION_SECRET, p.ex. openssl rand -base64 32
+# edite .env e gere os dois, p.ex. openssl rand -base64 32
 docker compose up --build
 ```
 
@@ -41,22 +43,30 @@ docker compose up --build
 ```bash
 corepack enable
 pnpm install
-docker compose -f compose.yaml -f compose.dev.yaml up -d postgres-control postgres-sandbox redis
+docker compose -f compose.yaml -f compose.dev.yaml up -d postgres-control postgres-sandbox redis docker-socket-proxy
 cp apps/api/.env.example apps/api/.env
+cp apps/sandbox-manager/.env.example apps/sandbox-manager/.env
 pnpm dev
+```
+
+O volume do `postgres-control` criado antes do sandbox-manager não tem o database dele; crie-o
+uma vez com o script de `infra/postgres-control/`, que é idempotente:
+
+```bash
+docker compose exec postgres-control sh /docker-entrypoint-initdb.d/01-sandbox-manager.sh
 ```
 
 `pnpm dev` aplica as migrations do banco de controle antes de subir a API, então um clone
 novo já sobe pronto. Se o `postgres-control` não estiver de pé, o comando falha aí mesmo,
 com a mensagem do Prisma, em vez de a API subir e errar a cada varredura do reaper.
 
-| Comando                 | O que faz                                                         |
-| ----------------------- | ----------------------------------------------------------------- |
-| `pnpm test`             | Testes unitários (inclui o contrato de engine rodando no PGlite)  |
-| `pnpm test:integration` | Contrato em PostgreSQL 18 real e API completa, via Testcontainers |
-| `pnpm lint`             | ESLint                                                            |
-| `pnpm typecheck`        | TypeScript                                                        |
-| `pnpm format`           | Prettier                                                          |
+| Comando                 | O que faz                                                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test`             | Testes unitários (inclui o contrato de engine rodando no PGlite)                                                       |
+| `pnpm test:integration` | Contrato em PostgreSQL 18 real, API completa e sandbox-manager contra o Docker (com teste de caos), via Testcontainers |
+| `pnpm lint`             | ESLint                                                                                                                 |
+| `pnpm typecheck`        | TypeScript                                                                                                             |
+| `pnpm format`           | Prettier                                                                                                               |
 
 ## Estrutura
 

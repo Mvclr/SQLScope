@@ -38,7 +38,9 @@ Visão consolidada. As decisões e seus trade-offs estão nos [ADRs](adr/); o co
                                     └─────────────────────────┘
 ```
 
-Três redes Docker separadas: `public` (web ↔ api), `control` (api ↔ postgres-controle, redis, sandbox-manager), `sandbox` (api ↔ T1 e T2; sem gateway para a internet). O banco de controle **não** está na rede `sandbox`.
+Quatro redes Docker separadas: `public` (web ↔ api), `control` (api ↔ postgres-controle, redis, sandbox-manager), `sandbox` (api ↔ T1; sem gateway para a internet) e `docker-api` (sandbox-manager ↔ socket proxy; a API não entra nela). O banco de controle **não** está na rede `sandbox`, e o sandbox-manager só conecta no próprio database, `sqlscope_sandboxes`.
+
+Cada sandbox T2 tem uma rede interna só dele, `sqlscope-t2-<id>`, também sem gateway: um sandbox não enxerga outro nem o cluster T1. Só os containers de `SANDBOX_ATTACH_CONTAINERS` entram nela (a API, quando o primeiro lab usar T2).
 
 ## Fluxo: executar SQL (T1)
 
@@ -72,6 +74,7 @@ No T0 o mesmo `runScript` roda no navegador sobre o PGlite, sem HTTP. A simetria
 | `@sqlscope/labs`           | navegador (e SSR) | labs SECURE como dados: setup, passos, o que cada passo promete (ADR 0009)   |
 | `apps/api`                 | Node              | sessões T1, provisionador, execução, SSE, rate limit, reaper                 |
 | `apps/web`                 | navegador e Node  | Next.js: Learn (T0), Build (T1), Importar (T0), Secure (T0)                  |
+| `apps/sandbox-manager`     | Node              | sandboxes T2: fila, containers via socket proxy, reconciliação, `/metrics`   |
 
 O web só carrega engine, parser e validador **sob demanda**: eles trazem WebAssembly, que não pode ser instanciado durante o SSR e não é necessário para desenhar a página.
 
@@ -87,13 +90,18 @@ O web só carrega engine, parser e validador **sob demanda**: eles trazem WebAss
 
 ```
 POST /labs/:labId/start
-  → api pede sandbox ao sandbox-manager (ou entra na fila se no limite)
-  → sandbox-manager: PENDING → PROVISIONING (container + seed do lab) → READY
-  → api recebe connection info (credenciais do role do lab, nunca superuser)
-  → SSE notifica READY / posição na fila
-  → usuário interage; expiração → EXPIRING → DESTROYING → DESTROYED
-  → reconciliador converge qualquer divergência
+  → api: POST /sandboxes { requestId, seed } no sandbox-manager (token de serviço)
+  → sandbox-manager: PENDING (na fila, com posição) → PROVISIONING → READY
+        container Postgres na rede própria do sandbox; o seed roda como superuser no init
+  → api consulta GET /sandboxes/:id até READY e recebe a conexão (role `lab`, nunca superuser)
+  → SSE notifica a posição na fila e o READY
+  → o primeiro POST /sandboxes/:id/heartbeat leva READY → ACTIVE; os seguintes renovam a ociosidade
+  → DELETE, ociosidade, READY não reivindicado ou fim do TTL → EXPIRING → DESTROYING → DESTROYED
+  → o loop de reconciliação converge qualquer divergência, mesmo com o banco de controle fora
 ```
+
+O sandbox-manager existe e é testado, inclusive com um teste de caos contra o Docker real. A
+integração com a API — a rota do lab e a fila por SSE — entra com o primeiro lab T2.
 
 ## Labs SECURE
 

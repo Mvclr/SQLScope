@@ -5,7 +5,7 @@ Substitui a seção 36 do [conceito](concept.md). Princípios: isolamento desde 
 ## Fase 0 — Fundação ✅
 
 - Monorepo (pnpm + Turborepo), tsconfig, lint, formatação.
-- `docker compose up` sobe web, api, postgres-controle, postgres-sandbox (T1), redis.
+- `docker compose up` sobe web, api, postgres-controle, postgres-sandbox (T1), redis — e, desde a Fase 3, o sandbox-manager com o socket proxy.
 - CI no GitHub Actions: lint, typecheck, testes.
 - pino em todos os serviços.
 - `packages/core`: `SqlExecutor`, queries de introspecção, `SchemaSnapshot`, `diffSnapshots` — com a mesma suíte de testes rodando contra PGlite e PostgreSQL (Testcontainers).
@@ -43,9 +43,11 @@ receber um relatório de segurança do próprio banco.
 
 ## Fase 3 — v0.3: Sandbox T2 e primeiros labs SECURE
 
-- `apps/sandbox-manager`: `DockerProvider`, máquina de estados, reconciliação, socket proxy, limite global e fila.
-- `/metrics` Prometheus (sandboxes ativos, tempo de provisionamento, falhas, órfãos coletados).
-- Teste de caos da reconciliação.
+- ~~`apps/sandbox-manager`: `DockerProvider`, máquina de estados, reconciliação, socket proxy, limite global e fila~~
+  — feito (ADR 0002, ajustes). A integração com a API (`POST /labs/:id/start`, fila por SSE)
+  entra com o primeiro lab T2.
+- ~~`/metrics` Prometheus (sandboxes ativos, tempo de provisionamento, falhas, órfãos coletados)~~ — feito.
+- ~~Teste de caos da reconciliação~~ — feito, contra o Docker real, com rodada aleatória reproduzível.
 - ~~**Lab SQL Injection** com AST lado a lado (vulnerável × parametrizada)~~ — feito (T0).
   O mini-app HTTP vulnerável continua pendente: precisa do T2.
 - ~~**Lab Roles & Permissions** com matriz de privilégios viva e "executar como"~~ — feito (T0).

@@ -30,22 +30,22 @@ sqlscope/
 
 ### Escolhas
 
-| Área                | Escolha                                                                 | Nota                                                                                         |
-| ------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Gerenciador / build | pnpm workspaces + Turborepo                                             |                                                                                              |
-| API                 | NestJS como **monólito modular**                                        | Módulos: `sessions`, `execution`, `introspection`, `scenarios`, `analysis`, `auth`, `events` |
-| Sandbox Manager     | Fastify                                                                 | Superfície mínima; não precisa de DI                                                         |
-| Banco de controle   | PostgreSQL + Prisma                                                     | Prisma **somente** aqui                                                                      |
-| Sandboxes           | driver `pg` puro + `pg-cursor`                                          | Nunca ORM                                                                                    |
-| Cache / coordenação | Redis                                                                   | TTL, locks, rate limit, fila T2. Não é fonte da verdade                                      |
-| Validação           | Zod, schemas compartilhados entre web e api                             |                                                                                              |
-| Erros esperados     | `Result<T, E>`                                                          | Erro de SQL do usuário é resultado, não exceção                                              |
-| Auth                | Implementação própria: sessão em cookie `httpOnly`, argon2id            | Sessões anônimas antes do login; OAuth depois                                                |
-| Testes              | Vitest, Testcontainers, Playwright                                      | Mesma suíte de `core` roda contra PGlite e PostgreSQL                                        |
-| Logs                | pino (JSON estruturado) desde o dia 1                                   |                                                                                              |
-| Métricas            | `/metrics` Prometheus a partir do sandbox-manager                       | OTel + Grafana depois                                                                        |
-| CI                  | GitHub Actions: lint, typecheck, unit, integração (Testcontainers), e2e |                                                                                              |
-| Licença             | MIT                                                                     |                                                                                              |
+| Área                | Escolha                                                                 | Nota                                                                                            |
+| ------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Gerenciador / build | pnpm workspaces + Turborepo                                             |                                                                                                 |
+| API                 | NestJS como **monólito modular**                                        | Módulos: `sessions`, `execution`, `introspection`, `scenarios`, `analysis`, `auth`, `events`    |
+| Sandbox Manager     | Fastify                                                                 | Superfície mínima; não precisa de DI                                                            |
+| Banco de controle   | PostgreSQL + Prisma                                                     | Prisma **somente** aqui                                                                         |
+| Sandboxes           | driver `pg` puro + `pg-cursor`                                          | Nunca ORM                                                                                       |
+| Cache / coordenação | Redis                                                                   | TTL, locks, rate limit. Não é fonte da verdade; a fila T2 ficou no Postgres (ADR 0002, ajustes) |
+| Validação           | Zod, schemas compartilhados entre web e api                             |                                                                                                 |
+| Erros esperados     | `Result<T, E>`                                                          | Erro de SQL do usuário é resultado, não exceção                                                 |
+| Auth                | Implementação própria: sessão em cookie `httpOnly`, argon2id            | Sessões anônimas antes do login; OAuth depois                                                   |
+| Testes              | Vitest, Testcontainers, Playwright                                      | Mesma suíte de `core` roda contra PGlite e PostgreSQL                                           |
+| Logs                | pino (JSON estruturado) desde o dia 1                                   |                                                                                                 |
+| Métricas            | `/metrics` Prometheus a partir do sandbox-manager                       | OTel + Grafana depois                                                                           |
+| CI                  | GitHub Actions: lint, typecheck, unit, integração (Testcontainers), e2e |                                                                                                 |
+| Licença             | MIT                                                                     |                                                                                                 |
 
 ### Frontend
 

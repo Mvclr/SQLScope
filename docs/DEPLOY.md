@@ -13,8 +13,13 @@ aqui além do IP.
 - Docker Engine com o plugin `compose` (v2.24 ou mais novo — o overlay usa `!reset` e
   `!override`).
 - O repositório clonado. Não é para compilar: o `compose.yaml` e os scripts de inicialização
-  em `infra/postgres-sandbox/` precisam existir em disco.
-- Cerca de 2 GB de RAM para as Fases 1 e 2. O T2 da Fase 3 pede 4 GB.
+  em `infra/postgres-sandbox/` e `infra/postgres-control/` precisam existir em disco.
+- Cerca de 2 GB de RAM para as Fases 1 e 2. O T2 da Fase 3 pede 4 GB: cada sandbox pode usar
+  até `T2_MEMORY_MB` (384 MB, com o disco em tmpfs incluído), e até `MAX_ACTIVE_SANDBOXES`
+  (4) rodam ao mesmo tempo, então o T2 sozinho chega a 1,5 GB.
+- A imagem `postgres:18-alpine` baixada no host. O compose já a baixa para os bancos; o
+  sandbox-manager a usa para os sandboxes T2 e não pode baixá-la, porque o socket proxy bloqueia
+  a API de imagens.
 
 ## Primeiro deploy
 
@@ -40,8 +45,11 @@ Depois edite o arquivo. O mínimo a trocar:
 
 - **`SESSION_SECRET`** — obrigatório, e a API se recusa a subir em produção com o valor que
   vem do repositório. Gere com `openssl rand -base64 32`.
-- **`CONTROL_DB_PASSWORD`**, **`SANDBOX_SUPERUSER_PASSWORD`**, **`SANDBOX_PROVISIONER_PASSWORD`**
-  e **`REDIS_PASSWORD`** — os defaults servem para rodar na sua máquina, não num host público.
+- **`SANDBOX_MANAGER_TOKEN`** — obrigatório, gerado do mesmo jeito. Quem tem esse token cria
+  containers no host pelo sandbox-manager, que também recusa em produção o valor do
+  repositório.
+- **`CONTROL_DB_PASSWORD`**, **`SANDBOX_SUPERUSER_PASSWORD`**, **`SANDBOX_PROVISIONER_PASSWORD`**,
+  **`SANDBOX_MANAGER_DB_PASSWORD`** e **`REDIS_PASSWORD`** — os defaults servem para rodar na sua máquina, não num host público.
 - **`SQLSCOPE_VERSION`** — deixe em `edge` para acompanhar a `main`, ou fixe uma tag.
 
 ### 4. Acesso às imagens
@@ -50,7 +58,8 @@ Pacotes publicados no GHCR nascem privados, mesmo vindo de um repositório públ
 dos dois:
 
 - **Torná-los públicos** (mais simples): em `github.com/Mvclr?tab=packages`, abra cada um dos
-  três pacotes — `sqlscope-web`, `sqlscope-api`, `sqlscope-api-migrate` — e mude a visibilidade
+  quatro pacotes — `sqlscope-web`, `sqlscope-api`, `sqlscope-api-migrate` e
+  `sqlscope-sandbox-manager` — e mude a visibilidade
   para _public_. Uma vez só; depois o servidor baixa sem autenticar.
 - **Autenticar o servidor**: crie um token clássico com escopo `read:packages` e faça
   `echo "$TOKEN" | docker login ghcr.io -u Mvclr --password-stdin`.
@@ -81,8 +90,25 @@ docker compose -f compose.yaml -f compose.prod.yaml pull
 docker compose -f compose.yaml -f compose.prod.yaml up --detach --wait
 ```
 
-O `git pull` importa porque o `compose.yaml` e os scripts de inicialização do cluster de
-sandbox moram no repositório.
+O `git pull` importa porque o `compose.yaml` e os scripts de inicialização dos clusters moram
+no repositório.
+
+### Volumes criados antes do sandbox-manager
+
+Os scripts de `infra/postgres-control/` só rodam quando o volume `control-data` nasce. Num
+servidor que já existia antes da Fase 3, o database e o role do sandbox-manager precisam ser
+criados uma vez, antes de subir a versão nova:
+
+```bash
+docker compose -f compose.yaml -f compose.prod.yaml up --detach postgres-control
+```
+
+```bash
+docker compose -f compose.yaml -f compose.prod.yaml exec postgres-control sh /docker-entrypoint-initdb.d/01-sandbox-manager.sh
+```
+
+O script é idempotente: rodá-lo de novo não muda nada, a não ser a senha do role, que ele
+sincroniza com `SANDBOX_MANAGER_DB_PASSWORD`.
 
 ## Voltar atrás
 
@@ -105,6 +131,17 @@ as imagens se reconstroem do repositório.
 ```bash
 docker compose -f compose.yaml -f compose.prod.yaml exec -T postgres-control \
   pg_dump -U sqlscope sqlscope | gzip > "sqlscope-$(date +%F).sql.gz"
+```
+
+## Métricas
+
+O sandbox-manager expõe `/metrics` no formato do Prometheus: sandboxes por status, tamanho
+da fila, tempo de provisionamento, falhas, órfãos colhidos e a saúde do loop de
+reconciliação. Ele não publica porta, então o scrape precisa vir de um container na rede
+`control`. Para olhar à mão:
+
+```bash
+docker compose -f compose.yaml -f compose.prod.yaml exec sandbox-manager wget -qO- http://127.0.0.1:4100/metrics
 ```
 
 ## O que ainda falta
