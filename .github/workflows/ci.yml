@@ -45,6 +45,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # The stack runs as NODE_ENV=production and refuses the secrets in the repository.
+      - name: Generate secrets
+        run: |
+          {
+            echo "SESSION_SECRET=$(openssl rand -base64 32)"
+            echo "SANDBOX_MANAGER_TOKEN=$(openssl rand -base64 32)"
+          } > .env
       - name: Build and start
         run: docker compose up --detach --build --wait --wait-timeout 300
       - name: API is ready
@@ -68,6 +75,54 @@ jobs:
         run: |
           if docker compose exec -T postgres-sandbox pg_isready -h postgres-control -t 3; then
             echo "::error::postgres-sandbox can reach postgres-control"
+            exit 1
+          fi
+      - name: A T2 sandbox is provisioned and torn down without leftovers
+        run: |
+          docker compose exec -T sandbox-manager node --input-type=module - <<'JS'
+          const headers = { authorization: `Bearer ${process.env.SANDBOX_MANAGER_TOKEN}` };
+          const call = async (method, path, body) => {
+            const init = { method, headers: { ...headers, 'content-type': 'application/json' } };
+            if (body) init.body = JSON.stringify(body);
+            const response = await fetch(`http://127.0.0.1:4100${path}`, init);
+            return { status: response.status, body: response.status === 204 ? null : await response.json() };
+          };
+          const until = async (id, wanted) => {
+            for (let i = 0; i < 240; i++) {
+              const { body } = await call('GET', `/sandboxes/${id}`);
+              if (wanted.includes(body.status)) return body;
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+            throw new Error(`sandbox ${id} never reached ${wanted}`);
+          };
+          const created = await call('POST', '/sandboxes', { requestId: 'ci-smoke', seed: 'create table t (id int);' });
+          if (created.status !== 202) throw new Error(`POST answered ${created.status}`);
+          const ready = await until(created.body.id, ['READY', 'FAILED']);
+          if (ready.status !== 'READY') throw new Error(`provisioning failed: ${ready.failure}`);
+          console.log(`ready in ${(Date.parse(ready.readyAt) - Date.parse(ready.requestedAt)) / 1000} s`);
+          if ((await call('POST', `/sandboxes/${ready.id}/heartbeat`)).body.status !== 'ACTIVE') throw new Error('heartbeat');
+          if ((await call('DELETE', `/sandboxes/${ready.id}`)).status !== 202) throw new Error('DELETE');
+          await until(ready.id, ['DESTROYED']);
+          JS
+          leftovers=$(docker ps --all --quiet --filter label=sqlscope.managed-by=sqlscope; docker network ls --quiet --filter label=sqlscope.managed-by=sqlscope)
+          if [ -n "$leftovers" ]; then
+            echo "::error::sandbox containers or networks left behind"
+            exit 1
+          fi
+      - name: The metrics endpoint answers
+        run: |
+          docker compose exec -T sandbox-manager wget -qO- http://127.0.0.1:4100/metrics \
+            | grep -q '^sqlscope_sandbox_provision_duration_seconds_count 1$'
+      - name: The socket proxy only allows containers and networks
+        run: |
+          if docker compose exec -T sandbox-manager wget -qO- http://docker-socket-proxy:2375/v1.44/images/json; then
+            echo "::error::the socket proxy allowed GET /images/json"
+            exit 1
+          fi
+      - name: The API cannot reach the Docker API
+        run: |
+          if docker compose exec -T api wget -qO- -T 3 http://docker-socket-proxy:2375/_ping; then
+            echo "::error::api can reach docker-socket-proxy"
             exit 1
           fi
       - name: Logs on failure

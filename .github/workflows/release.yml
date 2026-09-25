@@ -1,6 +1,6 @@
 name: Release images
 
-# Builds the three runtime images and publishes them to GHCR for both architectures the
+# Builds the four runtime images and publishes them to GHCR for both architectures the
 # deployment target may turn out to be: linux/amd64 (most VPS) and linux/arm64 (Ampere).
 # Each architecture is built on a native runner — emulating a Next.js build under QEMU
 # takes tens of minutes — and a manifest list then joins the two under one tag.
@@ -33,6 +33,7 @@ jobs:
           - { name: web, dockerfile: apps/web/Dockerfile, target: '' }
           - { name: api, dockerfile: apps/api/Dockerfile, target: runtime }
           - { name: api-migrate, dockerfile: apps/api/Dockerfile, target: migrate }
+          - { name: sandbox-manager, dockerfile: apps/sandbox-manager/Dockerfile, target: runtime }
         platform:
           - { arch: amd64, runner: ubuntu-latest }
           - { arch: arm64, runner: ubuntu-24.04-arm }
@@ -71,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [web, api, api-migrate]
+        image: [web, api, api-migrate, sandbox-manager]
     steps:
       - uses: docker/login-action@v3
         with:
@@ -126,6 +127,7 @@ jobs:
           {
             echo "SQLSCOPE_VERSION=sha-$(echo '${{ github.sha }}' | cut -c1-7)"
             echo "SESSION_SECRET=$(openssl rand -base64 32)"
+            echo "SANDBOX_MANAGER_TOKEN=$(openssl rand -base64 32)"
             echo "WEB_PUBLIC_PORT=3000"
           } > .env
           docker compose -f compose.yaml -f compose.prod.yaml up --detach --wait --wait-timeout 300
