@@ -48,6 +48,10 @@ export function isSandboxId(value: string): value is SandboxId {
   return SANDBOX_ID.test(value);
 }
 
+/** Every sandbox has one database and one unprivileged role to connect as, both `lab`. */
+export const LAB_DATABASE = 'lab';
+export const LAB_ROLE = 'lab';
+
 /** Why a sandbox left PROVISIONING, READY or ACTIVE for teardown. */
 export type EndReason = 'released' | 'unclaimed' | 'idle' | 'max-lifetime';
 

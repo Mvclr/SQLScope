@@ -1,5 +1,5 @@
 import type { Config } from '../../config.js';
-import type { SandboxId } from '../../domain/sandbox.js';
+import { LAB_DATABASE, LAB_ROLE, type SandboxId } from '../../domain/sandbox.js';
 import type { SandboxSpec } from '../provider.js';
 
 /** Labels on every container and network the manager creates. */
@@ -14,8 +14,6 @@ export const LABELS = {
 /** UID and GID of `postgres` in the official Alpine image. */
 const POSTGRES_UID = 70;
 export const SANDBOX_PORT = 5432;
-export const LAB_DATABASE = 'lab';
-export const LAB_ROLE = 'lab';
 const MIB = 1024 * 1024;
 
 export interface ContainerLimits {

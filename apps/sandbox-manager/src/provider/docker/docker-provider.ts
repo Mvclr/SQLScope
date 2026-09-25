@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { isSandboxId, type SandboxId } from '../../domain/sandbox.js';
+import { isSandboxId, LAB_DATABASE, LAB_ROLE, type SandboxId } from '../../domain/sandbox.js';
 import type {
   ContainerState,
   SandboxHandle,
@@ -10,8 +10,6 @@ import type {
 } from '../provider.js';
 import {
   containerSpec,
-  LAB_DATABASE,
-  LAB_ROLE,
   LABELS,
   labelsFor,
   resourceName,

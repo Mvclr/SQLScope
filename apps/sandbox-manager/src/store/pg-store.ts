@@ -140,6 +140,20 @@ export class PgStore {
     return result.rows[0] ? toRecord(result.rows[0]) : null;
   }
 
+  async getByRequestId(requestId: string): Promise<SandboxRecord | null> {
+    const result = await this.pool.query<Row>('select * from sandboxes where request_id = $1', [
+      requestId,
+    ]);
+    return result.rows[0] ? toRecord(result.rows[0]) : null;
+  }
+
+  async queueLength(): Promise<number> {
+    const result = await this.pool.query<{ count: number }>(
+      `select count(*)::int as count from sandboxes where status = 'PENDING'`,
+    );
+    return result.rows[0]?.count ?? 0;
+  }
+
   /**
    * Moves `id` from `from` to `to` if it is still in `from`; `null` when it is not. Entering
    * a terminal status stamps `ended_at` and erases the seed and the password; entering
