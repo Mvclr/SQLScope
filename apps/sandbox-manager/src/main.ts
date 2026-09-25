@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
+import { DockerClient } from './provider/docker/docker-client.js';
 import { migrate } from './store/migrate.js';
 import { PgStore } from './store/pg-store.js';
 
@@ -20,10 +21,14 @@ pool.on('error', () => {});
 
 await migrate(pool);
 const store = new PgStore(pool);
+const docker = new DockerClient(config.DOCKER_HOST);
 
 const app = buildApp({
   config,
-  checks: [{ name: 'state-database', check: () => store.ping() }],
+  checks: [
+    { name: 'state-database', check: () => store.ping() },
+    { name: 'docker', check: () => docker.ping() },
+  ],
 });
 
 let stopping = false;
