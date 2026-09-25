@@ -53,7 +53,11 @@ services:
       POSTGRES_USER: sqlscope
       POSTGRES_PASSWORD: ${CONTROL_DB_PASSWORD:-sqlscope}
       POSTGRES_DB: sqlscope
-    volumes: [control-data:/var/lib/postgresql]
+      # Read by the init script that gives the sandbox manager a database of its own.
+      SANDBOX_MANAGER_DB_PASSWORD: ${SANDBOX_MANAGER_DB_PASSWORD:-sandbox-manager}
+    volumes:
+      - control-data:/var/lib/postgresql
+      - ./infra/postgres-control:/docker-entrypoint-initdb.d:ro
     networks: [control]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U sqlscope -d sqlscope']
@@ -88,6 +92,46 @@ services:
       timeout: 3s
       retries: 10
 
+  # Owns the T2 sandbox containers (ADR 0002). No published port and no public network:
+  # the API reaches it on "control" once a lab uses T2.
+  sandbox-manager:
+    build: { context: ., dockerfile: apps/sandbox-manager/Dockerfile }
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # No fallback, like SESSION_SECRET: whoever holds it can start containers on the host.
+      SANDBOX_MANAGER_TOKEN: ${SANDBOX_MANAGER_TOKEN:?defina um SANDBOX_MANAGER_TOKEN forte no .env — veja .env.example}
+      STATE_DATABASE_URL: postgres://sqlscope_sandbox_manager:${SANDBOX_MANAGER_DB_PASSWORD:-sandbox-manager}@postgres-control:5432/sqlscope_sandboxes
+      DOCKER_HOST: http://docker-socket-proxy:2375
+      MANAGER_INSTANCE: sqlscope
+      # Empty until the API uses T2; then the API container joins every sandbox network.
+      SANDBOX_ATTACH_CONTAINERS: ''
+    networks: [control, docker-api]
+    depends_on:
+      postgres-control: { condition: service_healthy }
+      docker-socket-proxy: { condition: service_healthy }
+
+  # The Docker API with an allowlist: containers and networks, nothing else — no images,
+  # no exec, no volumes (ADR 0002). The socket is root on the host; only this container
+  # mounts it, and only the sandbox manager can reach this one.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      POST: 1
+      ALLOW_START: 1
+      EVENTS: 0
+    volumes: ['/var/run/docker.sock:/var/run/docker.sock:ro']
+    read_only: true
+    tmpfs: [/run, /tmp]
+    networks: [docker-api]
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:2375/_ping | grep -q OK']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   redis:
     image: redis:8-alpine
     command: ['redis-server', '--requirepass', '${REDIS_PASSWORD:-sqlscope}', '--appendonly', 'no']
@@ -105,6 +149,9 @@ networks:
   control:
     internal: true
   sandbox:
+    internal: true
+  # Sandbox manager ↔ socket proxy, and nobody else: the API is not on it.
+  docker-api:
     internal: true
 
 volumes:

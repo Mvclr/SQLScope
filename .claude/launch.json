@@ -12,6 +12,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@sqlscope/api", "dev"],
       "port": 4000
+    },
+    {
+      "name": "sandbox-manager",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@sqlscope/sandbox-manager", "dev"],
+      "port": 4100
     }
   ]
 }

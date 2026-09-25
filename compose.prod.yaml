@@ -39,6 +39,16 @@ services:
     restart: 'no'
     logging: *logging
 
+  sandbox-manager:
+    build: !reset null
+    image: ${SQLSCOPE_IMAGE_PREFIX:-ghcr.io/mvclr/sqlscope}-sandbox-manager:${SQLSCOPE_VERSION:-edge}
+    restart: unless-stopped
+    logging: *logging
+
+  docker-socket-proxy:
+    restart: unless-stopped
+    logging: *logging
+
   postgres-control:
     restart: unless-stopped
     logging: *logging
