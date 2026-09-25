@@ -90,3 +90,13 @@ export async function killContainer(name: string): Promise<void> {
   const client = await getContainerRuntimeClient();
   await client.container.getById(name).kill();
 }
+
+export async function pauseContainer(id: string): Promise<void> {
+  const client = await getContainerRuntimeClient();
+  await client.container.getById(id).pause();
+}
+
+export async function unpauseContainer(id: string): Promise<void> {
+  const client = await getContainerRuntimeClient();
+  await client.container.getById(id).unpause();
+}

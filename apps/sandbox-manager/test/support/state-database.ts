@@ -13,7 +13,13 @@ export interface StateDatabase {
 /** A migrated state database, as the manager finds it in production. */
 export async function startStateDatabase(): Promise<StateDatabase> {
   const container = await new PostgreSqlContainer('postgres:18-alpine').start();
-  const pool = new pg.Pool({ connectionString: container.getConnectionUri(), max: 10 });
+  // The same timeouts as main.ts: a paused database has to fail queries, not hang them.
+  const pool = new pg.Pool({
+    connectionString: container.getConnectionUri(),
+    max: 10,
+    connectionTimeoutMillis: 3_000,
+    query_timeout: 5_000,
+  });
   pool.on('error', () => {});
   await migrate(pool);
   return {
