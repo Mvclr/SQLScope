@@ -38,19 +38,20 @@ descreve a mudança para quem usa, e o teste faz parte dela.
 O escopo é o pacote ou app afetado. Se a mudança atravessa vários, **omita o escopo** em vez
 de listar todos.
 
-| Escopo           | Onde                                                          |
-| ---------------- | ------------------------------------------------------------- |
-| `core`           | `packages/core`                                               |
-| `sql-parser`     | `packages/sql-parser`                                         |
-| `engine`         | `packages/engine`                                             |
-| `explain`        | `packages/explain`                                            |
-| `security-rules` | `packages/security-rules`                                     |
-| `scenarios`      | `packages/scenarios`                                          |
-| `labs`           | `packages/labs` e o modo Secure                               |
-| `api`            | `apps/api`                                                    |
-| `web`            | `apps/web`                                                    |
-| `infra`          | Docker, compose, deploy                                       |
-| `repo`           | Configuração do monorepo (Turborepo, ESLint, TypeScript base) |
+| Escopo            | Onde                                                          |
+| ----------------- | ------------------------------------------------------------- |
+| `core`            | `packages/core`                                               |
+| `sql-parser`      | `packages/sql-parser`                                         |
+| `engine`          | `packages/engine`                                             |
+| `explain`         | `packages/explain`                                            |
+| `security-rules`  | `packages/security-rules`                                     |
+| `scenarios`       | `packages/scenarios`                                          |
+| `labs`            | `packages/labs` e o modo Secure                               |
+| `api`             | `apps/api`                                                    |
+| `web`             | `apps/web`                                                    |
+| `sandbox-manager` | `apps/sandbox-manager`                                        |
+| `infra`           | Docker, compose, deploy                                       |
+| `repo`            | Configuração do monorepo (Turborepo, ESLint, TypeScript base) |
 
 ### Descrição
 
