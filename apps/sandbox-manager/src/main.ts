@@ -2,6 +2,7 @@ import pg from 'pg';
 import { pino } from 'pino';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
+import { createMetrics } from './metrics.js';
 import { Scheduler } from './lifecycle/scheduler.js';
 import { systemClock } from './log.js';
 import { limitsFrom } from './provider/docker/container-spec.js';
@@ -57,9 +58,14 @@ const reconciler = new Reconciler(
   log,
 );
 
+const metrics = createMetrics(store);
+scheduler.onProvisioned = (outcome) => metrics.provisioned(outcome);
+reconciler.events = metrics.reconciler;
+
 const app = buildApp({
   config,
   logger: log,
+  metrics: metrics.registry,
   store,
   scheduler,
   afterRelease: () => void reconciler.trigger(),

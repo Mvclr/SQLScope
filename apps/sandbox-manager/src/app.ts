@@ -1,4 +1,5 @@
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
+import type { Registry } from 'prom-client';
 import type { Config } from './config.js';
 import { evaluate, type HealthCheck } from './http/health.js';
 import { sandboxRoutes, type SandboxRoutesDeps } from './http/routes.js';
@@ -11,6 +12,8 @@ export interface AppDeps extends SandboxRoutesDeps {
   readonly checks: readonly HealthCheck[];
   /** The process logger; omitted in tests. */
   readonly logger?: FastifyBaseLogger;
+  /** Served on /metrics when present. */
+  readonly metrics?: Registry;
 }
 
 /** The HTTP surface, built from its dependencies so tests can drive it with `inject()`. */
@@ -39,6 +42,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     const readiness = await evaluate(deps.checks, CHECK_TIMEOUT_MS);
     return reply.code(readiness.status === 'ready' ? 200 : 503).send(readiness);
   });
+
+  // Like the health routes, reachable only on the internal network: no port is published.
+  const { metrics } = deps;
+  if (metrics) {
+    app.get('/metrics', async (_request, reply) =>
+      reply.type(metrics.contentType).send(await metrics.metrics()),
+    );
+  }
 
   // Registered as a plugin so the token hook covers these routes and not the health ones.
   app.register(sandboxRoutes, deps);
