@@ -6,7 +6,10 @@ import type { Report } from '@sqlscope/security-rules';
 export type SessionNotice =
   | { type: 'schema-changed'; snapshot: SchemaSnapshot; changes: SchemaChange[] }
   | { type: 'session-expiring'; secondsLeft: number }
-  | { type: 'session-ended'; reason: string };
+  | { type: 'session-ended'; reason: string }
+  | { type: 'lab-queued'; position: number }
+  | { type: 'lab-ready' }
+  | { type: 'lab-ended'; reason: string };
 
 /**
  * Where a workspace's SQL runs. The UI is identical for both tiers (ADR 0001): the same

@@ -4,6 +4,7 @@ import {
   Globe,
   KeyRound,
   Rows3,
+  Server,
   ShieldCheck,
   Syringe,
   type LucideIcon,
@@ -17,6 +18,7 @@ const icons: Record<Lab['panel'], LucideIcon> = {
   ast: Syringe,
   privileges: KeyRound,
   policies: Rows3,
+  app: Syringe,
 };
 
 export default function LabCatalog() {
@@ -33,8 +35,9 @@ export default function LabCatalog() {
             </>
           }
         >
-          Cada lab é um banco seu, no seu navegador, onde você é superusuário. Crie roles, quebre a
-          própria consulta, ligue RLS e veja o que muda — nada aqui toca um servidor.
+          Quase todo lab é um banco seu, no seu navegador, onde você é superusuário: crie roles,
+          quebre a própria consulta, ligue RLS. Um deles roda num container descartável no servidor,
+          onde o app tem privilégio mínimo — está marcado com T2.
         </CatalogHeader>
         <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {labs.map((lab, i) => (
@@ -44,6 +47,14 @@ export default function LabCatalog() {
                 index={i + 1}
                 icon={icons[lab.panel]}
                 level={lab.level}
+                where={
+                  (lab.runtime ?? 'browser') === 'sandbox' ? (
+                    <>
+                      <Server aria-hidden className="size-3" />
+                      T2
+                    </>
+                  ) : undefined
+                }
                 title={lab.title}
                 summary={lab.summary}
                 count={`${lab.steps.length} passos`}

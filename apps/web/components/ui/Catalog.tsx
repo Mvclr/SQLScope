@@ -40,6 +40,7 @@ export function CatalogCard({
   index,
   icon: Icon,
   level,
+  where,
   title,
   summary,
   count,
@@ -49,6 +50,8 @@ export function CatalogCard({
   index: number;
   icon: LucideIcon;
   level: string;
+  /** Optional tier hint next to the level, e.g. "servidor · T2". */
+  where?: ReactNode;
   title: string;
   summary: string;
   count: string;
@@ -67,6 +70,11 @@ export function CatalogCard({
         <span className="rounded-full bg-structure-soft px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-structure">
           {level}
         </span>
+        {where && (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-faint">
+            {where}
+          </span>
+        )}
       </div>
       <h2 className="mt-4 text-[16px] font-semibold tracking-tight">{title}</h2>
       <p className="mt-1.5 text-[13px] text-muted">{summary}</p>

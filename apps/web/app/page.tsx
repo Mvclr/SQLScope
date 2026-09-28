@@ -23,6 +23,7 @@ const labIcons: Record<Lab['panel'], LucideIcon> = {
   ast: Syringe,
   privileges: KeyRound,
   policies: Rows3,
+  app: Syringe,
 };
 
 /**

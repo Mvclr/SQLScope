@@ -21,8 +21,9 @@ export function StepsPanel({ lab, store }: { lab: Lab; store: WorkspaceStore }) 
 
   const go = (next: number) => {
     setIndex(next);
+    // Browser labs always carry `sql`; the `?? ''` only satisfies the shared step type.
     const target = lab.steps[next];
-    if (target) setSql(target.sql);
+    if (target) setSql(target.sql ?? '');
   };
 
   return (

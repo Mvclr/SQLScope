@@ -2,7 +2,6 @@
 
 import { CircleX, Equal, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useWorkspace } from '../workspace/context';
 
 /**
  * The parse tree of what the database was asked, next to the tree of what the application
@@ -141,8 +140,12 @@ function shapeOf(nodes: readonly TreeNode[]): string[] {
   return nodes.flatMap((node) => [shapeLabel(node), ...shapeOf(node.children)]);
 }
 
-export function AstPanel({ baseline }: { baseline: string }) {
-  const sql = useWorkspace((s) => s.sql);
+/**
+ * Both trees side by side: what the query was asked (`sql`) against what the application
+ * meant to ask (`baseline`). `sql` is a prop, so a T0 lab feeds it from the editor and a T2
+ * lab feeds it the query its mini-app built.
+ */
+export function AstPanel({ sql, baseline }: { sql: string; baseline: string }) {
   const [current, setCurrent] = useState<{ tree: TreeNode[] } | { error: string }>({ tree: [] });
   const [reference, setReference] = useState<TreeNode[]>([]);
 

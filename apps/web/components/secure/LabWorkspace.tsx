@@ -7,19 +7,28 @@ import { buttonClass } from '../ui/button';
 import { pgliteBackend } from '../workspace/pglite-backend';
 import { createWorkspaceStore } from '../workspace/store';
 import { Workspace, type WorkspaceTab } from '../workspace/Workspace';
+import { useWorkspace } from '../workspace/context';
 import { AstPanel } from './AstPanel';
 import { PoliciesPanel } from './PoliciesPanel';
+import { SandboxLabWorkspace } from './SandboxLabWorkspace';
 import { PrivilegesPanel } from './PrivilegesPanel';
 import { StepsPanel } from './StepsPanel';
 
+/** The tree panel for a T0 lab, fed the SQL the learner is editing. */
+function AstFromEditor({ baseline }: { baseline: string }) {
+  const sql = useWorkspace((s) => s.sql);
+  return <AstPanel sql={sql} baseline={baseline} />;
+}
+
+/** Panels for the browser labs. The `app` panel belongs to the T2 workspace, not here. */
 const PANEL: Record<
-  Lab['panel'],
+  Exclude<Lab['panel'], 'app'>,
   { label: string; icon: LucideIcon; content: (lab: Lab) => ReactNode }
 > = {
   ast: {
     label: 'Árvore',
     icon: ListTree,
-    content: (lab) => <AstPanel baseline={lab.steps[0]!.sql} />,
+    content: (lab) => <AstFromEditor baseline={lab.steps[0]!.sql ?? ''} />,
   },
   privileges: { label: 'Privilégios', icon: KeyRound, content: () => <PrivilegesPanel /> },
   policies: { label: 'Políticas', icon: Rows3, content: () => <PoliciesPanel /> },
@@ -32,6 +41,14 @@ const PANEL: Record<
  */
 export function LabWorkspace({ labId }: { labId: string }) {
   const lab = findLab(labId) as Lab;
+  if ((lab.runtime ?? 'browser') === 'sandbox') return <SandboxLabWorkspace labId={labId} />;
+
+  const panel = PANEL[lab.panel as Exclude<Lab['panel'], 'app'>];
+  return <BrowserLab lab={lab} panel={panel} />;
+}
+
+/** The T0 flow: one PGlite database in the tab, the editor, and the lab's live panel. */
+function BrowserLab({ lab, panel }: { lab: Lab; panel: (typeof PANEL)[keyof typeof PANEL] }) {
   const [store] = useState(() =>
     createWorkspaceStore(
       pgliteBackend({ schema: lab.setup, seed: '' }),
@@ -39,7 +56,6 @@ export function LabWorkspace({ labId }: { labId: string }) {
     ),
   );
 
-  const panel = PANEL[lab.panel];
   const tabs: WorkspaceTab[] = [
     { id: 'lab', label: panel.label, icon: panel.icon, content: panel.content(lab) },
   ];
