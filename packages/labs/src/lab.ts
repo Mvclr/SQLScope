@@ -1,3 +1,5 @@
+import type { SearchMode } from './search.js';
+
 export type Level = 'iniciante' | 'intermediário' | 'avançado';
 
 /**
@@ -5,15 +7,22 @@ export type Level = 'iniciante' | 'intermediário' | 'avançado';
  * question the lab is about: what the parser understood, who may do what, which rows a
  * role can see.
  */
-export type LabPanel = 'ast' | 'privileges' | 'policies';
+export type LabPanel = 'ast' | 'privileges' | 'policies' | 'app';
 
 export interface LabStep {
   readonly id: string;
   readonly title: string;
   /** What this step is about, in prose. */
   readonly brief: string;
-  /** SQL the step puts in the editor, ready to run. */
-  readonly sql: string;
+  /**
+   * SQL the step puts in the editor, ready to run. Absent on a step that instead types
+   * into the mini-app (`input`), where the query is built, not written.
+   */
+  readonly sql?: string;
+  /** What the learner types into the mini-app's field, for an `app` lab. */
+  readonly input?: string;
+  /** Which way the mini-app builds the query from `input`. */
+  readonly mode?: SearchMode;
   /** What to look for after running it — the point of the step. */
   readonly expect: string;
   /**
@@ -42,6 +51,13 @@ export interface Lab {
   readonly summary: string;
   readonly level: Level;
   readonly panel: LabPanel;
+  /**
+   * Where the lab runs. `browser` labs live entirely in the learner's tab on PGlite (T0,
+   * ADR 0009). A `sandbox` lab needs a real server that the browser cannot give it — a
+   * disposable PostgreSQL container the API drives (T2, ADR 0002 and 0010). Defaults to
+   * `browser`.
+   */
+  readonly runtime?: 'browser' | 'sandbox';
   /** What the lab is trying to teach, shown before the first step. */
   readonly premise: string;
   /** DDL and data the lab starts from. */
