@@ -158,6 +158,10 @@ limit 10;`,
       id: 'clientes',
       title: 'Todos os clientes',
       prompt: 'Liste o nome e o e-mail de todos os clientes.',
+      concept: {
+        text: 'A lista de seleção do SELECT escolhe quais colunas aparecem no resultado, na ordem em que você as escreve.',
+        url: 'https://www.postgresql.org/docs/current/sql-select.html#SQL-SELECT-LIST',
+      },
       solution: 'select name, email from customers',
       ordered: false,
     },
@@ -166,6 +170,10 @@ limit 10;`,
       title: 'Pedidos acima de R$ 500',
       prompt: 'Liste o id e o total dos pedidos com total acima de R$ 500.',
       hint: 'Filtre linhas com WHERE.',
+      concept: {
+        text: 'A cláusula WHERE filtra linhas com uma condição booleana, avaliada por linha antes de o resultado ser montado.',
+        url: 'https://www.postgresql.org/docs/current/sql-select.html#SQL-WHERE',
+      },
       solution: 'select id, total from orders where total > 500',
       ordered: false,
     },
@@ -174,6 +182,10 @@ limit 10;`,
       title: 'Receita da loja',
       prompt: 'Calcule a receita total: a soma do total de todos os pedidos, exceto os cancelados.',
       hint: "SUM agrega várias linhas em uma. Pedidos cancelados têm status = 'cancelado'.",
+      concept: {
+        text: 'SUM é uma função de agregação: reduz várias linhas de entrada a um único valor, aqui a soma de total sobre as linhas que passaram pelo WHERE.',
+        url: 'https://www.postgresql.org/docs/current/functions-aggregate.html',
+      },
       solution: "select sum(total) from orders where status <> 'cancelado'",
       ordered: false,
     },
@@ -183,6 +195,10 @@ limit 10;`,
       prompt:
         'Qual produto vendeu mais unidades? Mostre o nome do produto e a quantidade total vendida.',
       hint: 'Junte order_items com products, agrupe por produto e ordene pela soma das quantidades.',
+      concept: {
+        text: 'LIMIT restringe o número de linhas devolvidas; combinado com ORDER BY, é como se pega "o maior" — mas a ordem tem de estar definida, senão qual linha é cortada é arbitrário.',
+        url: 'https://www.postgresql.org/docs/current/queries-limit.html',
+      },
       solution: `select p.name, sum(i.quantity) as units
 from order_items i
 join products p on p.id = i.product_id
@@ -196,6 +212,10 @@ limit 1`,
       title: 'Clientes que nunca compraram',
       prompt: 'Liste o nome dos clientes que nunca fizeram um pedido.',
       hint: 'NOT EXISTS, ou um LEFT JOIN procurando a ausência do outro lado.',
+      concept: {
+        text: 'NOT EXISTS testa a ausência de qualquer linha que satisfaça uma subconsulta correlacionada — a forma direta de expressar "para o qual não existe".',
+        url: 'https://www.postgresql.org/docs/current/functions-subquery.html#FUNCTIONS-SUBQUERY-EXISTS',
+      },
       solution: `select name from customers c
 where not exists (select 1 from orders o where o.customer_id = c.id)`,
       ordered: false,
@@ -206,6 +226,10 @@ where not exists (select 1 from orders o where o.customer_id = c.id)`,
       prompt:
         'Mostre cada categoria e o faturamento dela (quantidade × preço unitário dos itens), da maior para a menor.',
       hint: 'Aqui a ordem das linhas faz parte da resposta.',
+      concept: {
+        text: 'GROUP BY reúne as linhas por categoria antes da agregação; ORDER BY, depois, decide a ordem final das linhas do resultado — aqui, da maior receita para a menor.',
+        url: 'https://www.postgresql.org/docs/current/queries-table-expressions.html#QUERIES-GROUP',
+      },
       solution: `select p.category, sum(i.quantity * i.unit_price) as revenue
 from order_items i
 join products p on p.id = i.product_id

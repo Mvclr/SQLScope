@@ -62,6 +62,10 @@ export const sqlInjectionApp: Lab = {
       mode: 'concatenated',
       expect: 'Uma linha, a da Ana. Guarde o formato desta consulta: é o "correto".',
       rows: 1,
+      concept: {
+        text: 'Quando o texto digitado vira apenas o valor de uma comparação (=) dentro do WHERE, ele nunca muda a estrutura da consulta — só o que é filtrado.',
+        url: 'https://www.postgresql.org/docs/current/sql-select.html#SQL-WHERE',
+      },
     },
     {
       id: 'tautologia',
@@ -73,6 +77,10 @@ export const sqlInjectionApp: Lab = {
       expect:
         'Todos os usuários, inclusive o e-mail do admin — de uma busca que devia achar um só. O app leu a tabela toda porque a injeção ampliou o WHERE.',
       rows: 3,
+      concept: {
+        text: 'OR combina duas condições booleanas: o resultado é verdadeiro se qualquer uma delas for verdadeira. Uma condição sempre verdadeira, como \'1\'=\'1\', faz o OR inteiro ser sempre verdadeiro.',
+        url: 'https://www.postgresql.org/docs/current/functions-logical.html',
+      },
     },
     {
       id: 'union-barrado',
@@ -84,6 +92,10 @@ export const sqlInjectionApp: Lab = {
       expect:
         'permission denied for table cartoes. A injeção mudou o formato da consulta, mas o privilégio mínimo transformou o roubo num erro. A defesa mora no banco, não no texto.',
       refused: '42501',
+      concept: {
+        text: 'UNION combina os resultados de duas consultas SELECT com o mesmo número de colunas — mas continua exigindo privilégio SELECT em cada tabela referenciada, checado no momento da execução.',
+        url: 'https://www.postgresql.org/docs/current/queries-union.html',
+      },
     },
     {
       id: 'parametro',
@@ -95,6 +107,10 @@ export const sqlInjectionApp: Lab = {
       expect:
         'Zero linhas, e nenhum erro. Todo o texto virou o valor de um e-mail que não existe: sem aspa para fechar, sem UNION, sem nó novo. O parâmetro encerrou o assunto.',
       rows: 0,
+      concept: {
+        text: 'Uma consulta parametrizada (com $1 e um valor enviado separadamente) fixa a estrutura SQL antes de qualquer valor chegar: o driver nunca interpreta o conteúdo do parâmetro como texto de consulta.',
+        url: 'https://www.postgresql.org/docs/current/sql-prepare.html',
+      },
     },
   ],
   setup: seed,

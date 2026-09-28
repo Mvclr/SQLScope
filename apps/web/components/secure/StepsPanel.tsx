@@ -1,7 +1,7 @@
 'use client';
 
 import type { Lab } from '@sqlscope/labs';
-import { ChevronLeft, ChevronRight, Eye, FlaskConical } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Eye, FlaskConical } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from 'zustand';
 import { buttonClass } from '../ui/button';
@@ -72,6 +72,24 @@ export function StepsPanel({ lab, store }: { lab: Lab; store: WorkspaceStore }) 
         <div key={index} className="rise mt-3 space-y-1.5 text-[13px]">
           <p className="font-medium text-text">{step.title}</p>
           <p className="text-muted">{step.brief}</p>
+          {step.concept && (
+            <p className="flex items-start gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] text-muted">
+              <BookOpen aria-hidden className="mt-0.5 size-3.5 shrink-0 text-structure" />
+              <span>
+                <span className="font-medium text-structure">O que revisar: </span>
+                {step.concept.text}{' '}
+                <a
+                  href={step.concept.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-accent underline underline-offset-2 hover:no-underline"
+                >
+                  documentação do PostgreSQL
+                </a>
+                .
+              </span>
+            </p>
+          )}
           <p className="flex items-start gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] text-muted">
             <Eye aria-hidden className="mt-0.5 size-3.5 shrink-0 text-structure" />
             <span>

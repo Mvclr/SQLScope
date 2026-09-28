@@ -6,6 +6,11 @@ export interface Challenge {
   /** What the learner is asked to produce. */
   readonly prompt: string;
   readonly hint?: string;
+  /**
+   * The concept behind this challenge — a short explanation of what to know or review,
+   * with a link into the PostgreSQL documentation for the feature it relies on.
+   */
+  readonly concept?: { readonly text: string; readonly url: string };
   /** Reference answer. Its output, variant by variant, is the definition of "correct". */
   readonly solution: string;
   /** Whether row order is part of the answer (the prompt must say so). */

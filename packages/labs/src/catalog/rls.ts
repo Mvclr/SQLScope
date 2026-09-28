@@ -47,6 +47,10 @@ select id, tenant, titulo from documentos order by id;`,
       expect:
         'Quatro linhas, dos dois tenants. Um único endpoint que esqueça o filtro vaza o cliente inteiro.',
       rows: 4,
+      concept: {
+        text: 'Sem Row-Level Security, um privilégio SELECT na tabela dá acesso a todas as suas linhas: filtrar por tenant depende inteiramente de a aplicação lembrar de escrever o WHERE.',
+        url: 'https://www.postgresql.org/docs/current/ddl-rowsecurity.html',
+      },
     },
     {
       id: 'ligar',
@@ -59,6 +63,10 @@ select id, tenant, titulo from documentos order by id;`,
       expect:
         'Zero linhas, sem erro nenhum. É o "a consulta parou de retornar em produção" mais comum — e o motivo de o relatório de segurança avisar sobre RLS sem política.',
       rows: 0,
+      concept: {
+        text: 'ALTER TABLE ... ENABLE ROW LEVEL SECURITY liga a checagem de políticas na tabela. Sem nenhuma política definida, o padrão é negar — nenhuma linha é visível a quem não é dono nem superusuário.',
+        url: 'https://www.postgresql.org/docs/current/ddl-rowsecurity.html',
+      },
     },
     {
       id: 'politica',
@@ -77,6 +85,10 @@ select id, tenant, titulo from documentos order by id;`,
       expect:
         'Só as duas linhas da acme. Troque para globex e rode de novo: a consulta é a mesma, o resultado não.',
       rows: 2,
+      concept: {
+        text: 'CREATE POLICY define uma condição (USING) que cada linha precisa satisfazer para ser visível à role indicada. current_setting lê uma variável de sessão, aqui usada para dizer qual tenant é o "atual".',
+        url: 'https://www.postgresql.org/docs/current/sql-createpolicy.html',
+      },
     },
     {
       id: 'escrita',
@@ -87,6 +99,10 @@ select id, tenant, titulo from documentos order by id;`,
       expect:
         'new row violates row-level security policy. O WITH CHECK recusa a linha antes de ela existir.',
       refused: '42501',
+      concept: {
+        text: 'Uma política pode ter duas condições independentes: USING controla quais linhas existentes são visíveis (SELECT, UPDATE, DELETE); WITH CHECK controla quais linhas novas ou alteradas podem ser gravadas (INSERT, UPDATE).',
+        url: 'https://www.postgresql.org/docs/current/sql-createpolicy.html',
+      },
     },
     {
       id: 'dono',
@@ -99,6 +115,10 @@ select id, tenant, titulo from documentos order by id;`,
       expect:
         'Como dono, as quatro linhas voltam — a política continua lá, apenas não vale para ele.',
       rows: 4,
+      concept: {
+        text: 'Por padrão, o dono da tabela (e qualquer superusuário) ignora as políticas de row-level security dela — RLS restringe outras roles, não quem já pode alterar a estrutura da tabela.',
+        url: 'https://www.postgresql.org/docs/current/ddl-rowsecurity.html',
+      },
     },
     {
       id: 'forcar',
@@ -112,6 +132,10 @@ select id, tenant, titulo from documentos order by id;`,
       expect:
         'Zero linhas para o dono também: a política é "to app_tenant", então para app_dono não existe política nenhuma — e com FORCE, nenhuma política significa nenhuma linha. Uma ressalva que vale mais que o lab: superusuário ignora RLS sempre, com ou sem FORCE. Se a aplicação conecta como superusuário, nada disso protege.',
       rows: 0,
+      concept: {
+        text: 'ALTER TABLE ... FORCE ROW LEVEL SECURITY estende as políticas também ao dono da tabela (superusuários continuam isentos sempre). Sem FORCE, RLS já protege as demais roles; FORCE fecha a exceção do dono.',
+        url: 'https://www.postgresql.org/docs/current/sql-altertable.html',
+      },
     },
   ],
   setup,

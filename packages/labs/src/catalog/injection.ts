@@ -49,6 +49,10 @@ export const sqlInjection: Lab = {
       expect:
         'Uma linha. Guarde esta árvore: ela é o formato "correto" com que as outras serão comparadas.',
       rows: 1,
+      concept: {
+        text: 'Uma constante de texto entre aspas simples é um valor literal; comparada com = numa cláusula WHERE, ela nunca altera a estrutura da consulta, só o que é filtrado.',
+        url: 'https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS',
+      },
     },
     {
       id: 'tautologia',
@@ -59,6 +63,10 @@ export const sqlInjection: Lab = {
       expect:
         'Todas as linhas. Na árvore, o filtro deixou de ser uma comparação e virou um OR — um nó que a aplicação nunca escreveu.',
       rows: 3,
+      concept: {
+        text: 'OR combina duas condições booleanas: o resultado é verdadeiro se qualquer uma delas for verdadeira. Uma condição sempre verdadeira, como \'1\'=\'1\', faz o OR inteiro ser sempre verdadeiro — é o que se chama de tautologia.',
+        url: 'https://www.postgresql.org/docs/current/functions-logical.html',
+      },
     },
     {
       id: 'union',
@@ -71,6 +79,10 @@ select id, numero, validade from cartoes;`,
       expect:
         'Números de cartão numa tela de busca de usuários. O nó raiz agora é um SelectStmt com op = SETOP_UNION: outra forma, não outro valor.',
       rows: 3,
+      concept: {
+        text: 'UNION (e UNION ALL) combina os resultados de duas consultas SELECT em um só, desde que tenham o mesmo número de colunas e tipos compatíveis. UNION ALL mantém duplicatas; UNION as remove.',
+        url: 'https://www.postgresql.org/docs/current/queries-union.html',
+      },
     },
     {
       id: 'parametro',
@@ -81,6 +93,10 @@ select id, numero, validade from cartoes;`,
       expect:
         'Zero linhas — e nenhum erro. O parâmetro virou um ParamRef na árvore: o que o usuário digita vai para dentro do nó, nunca vira um nó.',
       rows: 0,
+      concept: {
+        text: 'PREPARE cria uma consulta com parâmetros ($1, $2, ...) cuja estrutura é fixada antes de qualquer valor chegar; EXECUTE só preenche os parâmetros, nunca reinterpreta texto como SQL.',
+        url: 'https://www.postgresql.org/docs/current/sql-prepare.html',
+      },
     },
     {
       id: 'escape-nao-basta',
@@ -91,6 +107,10 @@ select id, numero, validade from cartoes;`,
       expect:
         'Todas as linhas de novo, sem uma única aspa envolvida. A defesa é o parâmetro, não a limpeza do texto.',
       rows: 3,
+      concept: {
+        text: 'Os operadores de comparação (=, <>, <, >, ...) funcionam sobre qualquer tipo, não só texto entre aspas — inclusive números, onde não há aspa para "escapar".',
+        url: 'https://www.postgresql.org/docs/current/functions-comparison.html',
+      },
     },
   ],
   setup,

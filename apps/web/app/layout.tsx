@@ -1,5 +1,6 @@
 import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
+import { BookOpen } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -33,6 +34,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </span>
             <span className="hidden sm:inline">SQLScope</span>
           </Link>
+          <a
+            href="https://www.postgresql.org/docs/current/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Abrir a documentação do PostgreSQL em uma nova aba"
+            className="grid size-8 shrink-0 place-items-center rounded-xl border border-border bg-surface-1 text-muted shadow-[var(--elevation-1)] transition-colors hover:text-text"
+          >
+            <BookOpen aria-hidden className="size-3.5" />
+            <span className="sr-only">Documentação do PostgreSQL</span>
+          </a>
           <ModeNav />
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             <AccountNav />

@@ -26,6 +26,11 @@ export interface LabStep {
   /** What to look for after running it — the point of the step. */
   readonly expect: string;
   /**
+   * The concept behind this step — a short explanation of what to know or review before
+   * running it, with a link into the PostgreSQL documentation for the feature it relies on.
+   */
+  readonly concept?: { readonly text: string; readonly url: string };
+  /**
    * SQLSTATE this step is supposed to end in. Several steps teach by being refused, and
    * naming the code keeps the promise testable: a lab whose SQL stopped behaving as the
    * text says would be worse than no lab.

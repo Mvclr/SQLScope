@@ -5,6 +5,7 @@ import { pgliteSession } from '@sqlscope/core/pglite';
 import type { Scenario } from '@sqlscope/scenarios';
 import type { OpenVariant, Verdict } from '@sqlscope/scenarios/check';
 import {
+  BookOpen,
   Check,
   CircleCheck,
   CircleX,
@@ -125,6 +126,24 @@ export function ChallengePanel({ scenario, store }: { scenario: Scenario; store:
 
       <h2 className="mt-2.5 text-[15px] font-semibold tracking-tight">{challenge.title}</h2>
       <p className="mt-1 text-[13px] text-text">{challenge.prompt}</p>
+      {challenge.concept && (
+        <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] text-muted">
+          <BookOpen aria-hidden className="mt-0.5 size-3.5 shrink-0 text-structure" />
+          <span>
+            <span className="font-medium text-structure">O que revisar: </span>
+            {challenge.concept.text}{' '}
+            <a
+              href={challenge.concept.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline underline-offset-2 hover:no-underline"
+            >
+              documentação do PostgreSQL
+            </a>
+            .
+          </span>
+        </p>
+      )}
       {challenge.ordered && (
         <p className="mt-1 text-[12px] text-faint">A ordem das linhas faz parte da resposta.</p>
       )}

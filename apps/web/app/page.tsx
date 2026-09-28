@@ -74,7 +74,7 @@ export default function Home() {
           tier="PGlite · no seu navegador"
           meta={`${scenarios.length} cenários com desafios`}
         >
-          Uma loja, uma biblioteca — com desafios corrigidos automaticamente.
+          Uma loja, uma biblioteca, e muito mais — com desafios corrigidos automaticamente.
         </Mode>
         <Mode
           href="/import"

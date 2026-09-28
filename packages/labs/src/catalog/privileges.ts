@@ -49,6 +49,10 @@ create role app_leitura nologin;
 create role app_escrita nologin;`,
       expect:
         'As roles aparecem na matriz sem nenhuma marca. Criar uma role não dá acesso a nada — o acesso vem dos GRANTs.',
+      concept: {
+        text: 'CREATE ROLE cria uma role de banco, que pode representar um usuário ou um grupo. NOLOGIN impede que ela conecte diretamente — útil para roles que só existem para agrupar privilégios.',
+        url: 'https://www.postgresql.org/docs/current/sql-createrole.html',
+      },
     },
     {
       id: 'negado',
@@ -60,6 +64,10 @@ select * from clientes;`,
       expect:
         'permission denied for table clientes. Guarde a mensagem: é exatamente o que sua aplicação verá se faltar um grant.',
       refused: '42501',
+      concept: {
+        text: 'SET ROLE muda a identidade de privilégios da sessão atual para outra role que a role de conexão possa assumir, sem precisar reconectar.',
+        url: 'https://www.postgresql.org/docs/current/sql-set-role.html',
+      },
     },
     {
       id: 'conceder',
@@ -69,6 +77,10 @@ select * from clientes;`,
       sql: `reset role;
 grant select on clientes, faturas to app_leitura;`,
       expect: 'A matriz ganha SELECT nas duas tabelas para app_leitura.',
+      concept: {
+        text: 'GRANT concede um privilégio específico (SELECT, INSERT, UPDATE, ...) sobre um objeto a uma role. Conceder só o verbo necessário — nunca ALL PRIVILEGES por padrão — é o princípio do menor privilégio.',
+        url: 'https://www.postgresql.org/docs/current/sql-grant.html',
+      },
     },
     {
       id: 'ler',
@@ -80,6 +92,10 @@ update faturas set paga = true where id = 3;`,
       expect:
         'O SELECT responde 3; o UPDATE é recusado. Um privilégio por verbo, por tabela — é assim que o PostgreSQL pensa.',
       refused: '42501',
+      concept: {
+        text: 'Os privilégios em tabelas são concedidos por operação (SELECT, INSERT, UPDATE, DELETE, ...): ter um não implica ter os outros.',
+        url: 'https://www.postgresql.org/docs/current/ddl-priv.html',
+      },
     },
     {
       id: 'herdar',
@@ -91,6 +107,10 @@ grant app_leitura to app_escrita;
 grant insert, update on faturas to app_escrita;`,
       expect:
         'app_escrita passa a ser membro de app_leitura na matriz. Herdar é a forma de não duplicar — e de não esquecer de revogar em dois lugares.',
+      concept: {
+        text: 'GRANT role_a TO role_b faz de role_b um membro de role_a; por padrão, uma role membro herda automaticamente os privilégios das roles de que participa.',
+        url: 'https://www.postgresql.org/docs/current/role-membership.html',
+      },
     },
     {
       id: 'escrever',
@@ -102,6 +122,10 @@ update faturas set paga = true where id = 3;
 select id, paga from faturas order by id;`,
       expect: 'O UPDATE passa. A herança trouxe o SELECT; o grant novo trouxe a escrita.',
       rows: 3,
+      concept: {
+        text: 'Uma coluna gerada por identidade (GENERATED ... AS IDENTITY) usa uma sequência interna: INSERT nela também exige privilégio USAGE ou UPDATE nessa sequência, concedido junto com a tabela.',
+        url: 'https://www.postgresql.org/docs/current/sql-createsequence.html',
+      },
     },
     {
       id: 'public',
@@ -112,6 +136,10 @@ select id, paga from faturas order by id;`,
 grant select on clientes to public;`,
       expect:
         'Na matriz, uma linha PUBLIC. Qualquer role futura já nasce podendo ler clientes — sem ninguém ter concedido nada a ela.',
+      concept: {
+        text: 'PUBLIC é uma pseudo-role que representa todas as roles, presentes e futuras. Conceder a PUBLIC é conceder a qualquer um que conecte, agora ou depois.',
+        url: 'https://www.postgresql.org/docs/current/ddl-priv.html',
+      },
     },
     {
       id: 'revogar',
@@ -121,6 +149,10 @@ grant select on clientes to public;`,
 revoke insert, update on faturas from app_escrita;`,
       expect:
         'A linha PUBLIC some e app_escrita fica só com o que herdou. Revogar de PUBLIC não tira o que foi concedido diretamente a uma role: são grants diferentes.',
+      concept: {
+        text: 'REVOKE remove um privilégio concedido anteriormente. Cada GRANT é registrado separadamente por role (inclusive PUBLIC), então revogar de uma não afeta as demais.',
+        url: 'https://www.postgresql.org/docs/current/sql-revoke.html',
+      },
     },
   ],
   setup,

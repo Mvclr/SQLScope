@@ -154,6 +154,10 @@ order by b.published_year;`,
       id: 'antes-de-1950',
       title: 'Clássicos antigos',
       prompt: 'Liste o título e o ano de publicação dos livros publicados antes de 1950.',
+      concept: {
+        text: 'A cláusula WHERE filtra linhas com uma condição booleana, avaliada por linha antes de o resultado ser montado.',
+        url: 'https://www.postgresql.org/docs/current/sql-select.html#SQL-WHERE',
+      },
       solution: 'select title, published_year from books where published_year < 1950',
       ordered: false,
     },
@@ -163,6 +167,10 @@ order by b.published_year;`,
       prompt:
         'Liste o nome e a data de adesão dos membros, do que entrou mais recentemente para o mais antigo.',
       hint: 'A ordem das linhas faz parte da resposta: ORDER BY ... DESC.',
+      concept: {
+        text: 'ORDER BY define a ordem das linhas do resultado; DESC inverte a ordem padrão (crescente) para decrescente.',
+        url: 'https://www.postgresql.org/docs/current/queries-order.html',
+      },
       solution: 'select name, joined_on from members order by joined_on desc',
       ordered: true,
     },
@@ -172,6 +180,10 @@ order by b.published_year;`,
       prompt:
         'Para cada autor, mostre o nome e quantos livros dele há no acervo — inclusive autores com zero livros.',
       hint: 'Um JOIN comum descarta autores sem livros. Qual JOIN mantém todas as linhas da esquerda?',
+      concept: {
+        text: 'LEFT JOIN mantém todas as linhas da tabela à esquerda, preenchendo com NULL onde não há correspondência — diferente do JOIN comum (INNER), que descarta o que não casa.',
+        url: 'https://www.postgresql.org/docs/current/queries-table-expressions.html#QUERIES-JOIN',
+      },
       solution: `select a.name, count(b.id)
 from authors a
 left join books b on b.author_id = a.id
@@ -183,6 +195,10 @@ group by a.id, a.name`,
       title: 'Empréstimos atrasados',
       prompt: `Liste o título do livro e o nome do membro de cada empréstimo em atraso. Considere hoje como ${TODAY}: um empréstimo está atrasado se ainda não foi devolvido e o prazo (due_on) já passou.`,
       hint: 'Livro não devolvido: returned_on IS NULL. Cuidado: = NULL nunca é verdadeiro.',
+      concept: {
+        text: 'NULL representa um valor desconhecido: qualquer comparação com = ou <> resulta em NULL, nunca em verdadeiro. Para testar a ausência de valor, use IS NULL.',
+        url: 'https://www.postgresql.org/docs/current/functions-comparison.html#FUNCTIONS-COMPARISON-NULL-COMPARISON',
+      },
       solution: `select b.title, m.name
 from loans l
 join books b on b.id = l.book_id
@@ -195,6 +211,10 @@ where l.returned_on is null and l.due_on < date '${TODAY}'`,
       title: 'Leitores assíduos',
       prompt: 'Liste o nome dos membros que fizeram mais de 2 empréstimos.',
       hint: 'WHERE filtra linhas antes de agrupar; HAVING filtra os grupos.',
+      concept: {
+        text: 'GROUP BY reúne linhas em grupos para agregação; HAVING filtra esses grupos depois de calculados, o que WHERE não consegue fazer (WHERE atua antes do agrupamento).',
+        url: 'https://www.postgresql.org/docs/current/queries-table-expressions.html#QUERIES-GROUP',
+      },
       solution: `select m.name
 from members m
 join loans l on l.member_id = m.id
@@ -206,6 +226,10 @@ having count(*) > 2`,
       id: 'nunca-emprestados',
       title: 'Na estante, intocados',
       prompt: 'Liste o título dos livros que nunca foram emprestados.',
+      concept: {
+        text: 'NOT EXISTS testa a ausência de qualquer linha que satisfaça uma subconsulta correlacionada — a forma direta de expressar "para o qual não existe".',
+        url: 'https://www.postgresql.org/docs/current/functions-subquery.html#FUNCTIONS-SUBQUERY-EXISTS',
+      },
       solution: `select title from books b
 where not exists (select 1 from loans l where l.book_id = b.id)`,
       ordered: false,
