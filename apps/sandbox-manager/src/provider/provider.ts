@@ -41,11 +41,17 @@ export interface SandboxObservedState {
   readonly expiresAt: Date | null;
 }
 
-/** The port of ADR 0002, verbatim. */
+/** The port of ADR 0002, plus one optional capability (ADR 0010). */
 export interface SandboxProvider {
   provision(spec: SandboxSpec): Promise<SandboxHandle>;
   /** Idempotent: destroying what is already gone succeeds. */
   destroy(id: SandboxId): Promise<void>;
   inspect(id: SandboxId): Promise<SandboxObservedState | null>;
   list(): Promise<SandboxObservedState[]>;
+  /**
+   * Gives a live sandbox back the clients that should reach it but no longer do — the API
+   * container, after a deploy recreated it. Idempotent; a provider without the notion of
+   * attached clients leaves it out.
+   */
+  reattach?(id: SandboxId): Promise<void>;
 }

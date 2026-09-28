@@ -233,4 +233,14 @@ describe('convergence', () => {
     await Promise.all([reconciler.trigger(), reconciler.trigger(), reconciler.trigger()]);
     expect(provider.destroyed.filter((d) => d === id)).toHaveLength(1);
   });
+
+  it('reattaches the clients of live sandboxes, and only of those', async () => {
+    const claimed = await ready('req-claimed');
+    await scheduler.heartbeat(claimed);
+    const unclaimed = await ready('req-unclaimed');
+    const released = await ready('req-released');
+    await scheduler.release(released);
+    await pass();
+    expect(provider.reattached.sort()).toEqual([claimed, unclaimed].sort());
+  });
 });

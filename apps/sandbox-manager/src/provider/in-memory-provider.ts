@@ -20,6 +20,7 @@ export class InMemoryProvider implements SandboxProvider {
   private gate: Promise<void> | null = null;
   readonly provisioned: SandboxId[] = [];
   readonly destroyed: SandboxId[] = [];
+  readonly reattached: SandboxId[] = [];
 
   /** Makes the next call to `operation` throw. */
   failNext(operation: Operation, error = new Error(`injected ${operation} failure`)): void {
@@ -95,6 +96,10 @@ export class InMemoryProvider implements SandboxProvider {
   async list(): Promise<SandboxObservedState[]> {
     this.throwIfFaulted('list');
     return [...this.sandboxes.values()];
+  }
+
+  async reattach(id: SandboxId): Promise<void> {
+    if (this.sandboxes.has(id)) this.reattached.push(id);
   }
 
   /** Current container state, for assertions. */

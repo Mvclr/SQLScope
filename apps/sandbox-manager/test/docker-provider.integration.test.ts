@@ -110,6 +110,22 @@ describe('DockerProvider', () => {
     expect(response.status).toBe(403);
   });
 
+  it('reattaches a client that left the sandbox network', async () => {
+    // What a deploy does to the API: a new container, on none of the sandbox networks.
+    await docker.disconnectNetwork(handle.connection.host, attached.name);
+    expect((await psql(attached, url(handle), 'select 1')).exitCode).not.toBe(0);
+
+    await provider.reattach(handle.id);
+    expect(await psql(attached, url(handle), 'select 1')).toEqual({ exitCode: 0, output: '1' });
+    // Already there: nothing to do, and no error.
+    await provider.reattach(handle.id);
+  });
+
+  it('skips a client that does not exist right now', async () => {
+    const missing = dockerProvider(proxy, instance, { attach: ['sqlscope-no-such-container'] });
+    await expect(missing.reattach(handle.id)).resolves.toBeUndefined();
+  });
+
   it('destroys idempotently, detaching attached containers', async () => {
     await provider.destroy(handle.id);
     await provider.destroy(handle.id);

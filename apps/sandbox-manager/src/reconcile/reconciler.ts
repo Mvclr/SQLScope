@@ -103,6 +103,16 @@ export class Reconciler {
         this.log.warn(`reconcile ${action.kind} ${action.id} failed: ${describe(error)}`);
       }
     }
+    // A deploy that recreated an attached client (the API) took it off every sandbox
+    // network; the live ones get it back, or their labs lose the database midway.
+    const reattach = this.provider.reattach?.bind(this.provider);
+    if (reattach) {
+      for (const record of records.filter((r) => r.status === 'READY' || r.status === 'ACTIVE')) {
+        await reattach(record.id).catch((error: unknown) => {
+          this.log.warn(`reattaching ${record.id} failed: ${describe(error)}`);
+        });
+      }
+    }
     // Teardowns may have freed slots for the queue.
     await this.scheduler.admit();
     this.events.pass((performance.now() - startedAt) / 1000);

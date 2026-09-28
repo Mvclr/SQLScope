@@ -16,7 +16,7 @@ import {
   SANDBOX_PORT,
   type ContainerLimits,
 } from './container-spec.js';
-import type { DockerClient } from './docker-client.js';
+import { DockerError, type DockerClient } from './docker-client.js';
 
 const HEALTH_POLL_MS = 250;
 
@@ -89,6 +89,25 @@ export class DockerProvider implements SandboxProvider {
       await this.docker.disconnectNetwork(name, endpoint.Name);
     }
     await this.docker.removeNetwork(name);
+  }
+
+  /**
+   * Joins the attach containers to the sandbox network again. Provisioning connected them
+   * once, but recreating one of them — every deploy of the API does — produces a new
+   * container off every sandbox network. Only the missing ones are connected, and one that
+   * does not exist right now (the API is down) is simply skipped.
+   */
+  async reattach(id: SandboxId): Promise<void> {
+    if (this.options.attach.length === 0) return;
+    const name = resourceName(id);
+    const network = await this.docker.inspectNetwork(name);
+    if (network === null) return;
+    const present = new Set(Object.values(network.Containers ?? {}).map((c) => c.Name));
+    for (const container of this.options.attach.filter((c) => !present.has(c))) {
+      await this.docker.connectNetwork(name, container).catch((error: unknown) => {
+        if (!(error instanceof DockerError && error.status === 404)) throw error;
+      });
+    }
   }
 
   async inspect(id: SandboxId): Promise<SandboxObservedState | null> {
