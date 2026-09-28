@@ -48,8 +48,9 @@ receber um relatório de segurança do próprio banco.
   entra com o primeiro lab T2.
 - ~~`/metrics` Prometheus (sandboxes ativos, tempo de provisionamento, falhas, órfãos coletados)~~ — feito.
 - ~~Teste de caos da reconciliação~~ — feito, contra o Docker real, com rodada aleatória reproduzível.
-- ~~**Lab SQL Injection** com AST lado a lado (vulnerável × parametrizada)~~ — feito (T0).
-  O mini-app HTTP vulnerável continua pendente: precisa do T2.
+- ~~**Lab SQL Injection** com AST lado a lado (vulnerável × parametrizada)~~ — feito (T0), e
+  o **mini-app no T2** também: o aluno digita num app de busca que monta o SQL, a injeção
+  muda o formato da consulta e o privilégio mínimo barra o roubo (ADR 0010).
 - ~~**Lab Roles & Permissions** com matriz de privilégios viva e "executar como"~~ — feito (T0).
 - ~~**Lab Row-Level Security** multi-tenant~~ — feito (T0).
 - ~~**Export do schema com políticas RLS**~~ — feito: as políticas entraram no `SchemaSnapshot`,

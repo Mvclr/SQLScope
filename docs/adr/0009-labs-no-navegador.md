@@ -37,6 +37,8 @@ próprio banco.
   para uma role comum antes de demonstrar o forçamento, e diz isso em voz alta, porque é
   uma armadilha real em produção.
 - Um lab que precise de rede, de vários processos ou de um app HTTP vulnerável (o caso do
-  mini-app do lab de injection, e dos labs de concorrência) continua esperando o T2.
+  mini-app do lab de injection, e dos labs de concorrência) continua esperando o T2. O
+  mini-app de injection ganhou essa variante T2 na Fase 3 (ADR 0010): a de injection existe
+  nos dois tiers, a do T0 pela árvore e a do T2 com um app de verdade e privilégio mínimo.
 - Como o conteúdo é dado e os testes o executam de verdade, um lab que deixe de se comportar
   como o texto promete quebra o build em vez de ensinar errado.

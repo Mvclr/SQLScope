@@ -89,19 +89,25 @@ O web só carrega engine, parser e validador **sob demanda**: eles trazem WebAss
 ## Fluxo: lab T2
 
 ```
-POST /labs/:labId/start
-  → api: POST /sandboxes { requestId, seed } no sandbox-manager (token de serviço)
+POST /labs/:labId/runs                              (cookie de sessão; um LabRun por sessão)
+  → api grava o vínculo e faz POST /sandboxes { requestId, seed } no manager (token de serviço)
   → sandbox-manager: PENDING (na fila, com posição) → PROVISIONING → READY
-        container Postgres na rede própria do sandbox; o seed roda como superuser no init
-  → api consulta GET /sandboxes/:id até READY e recebe a conexão (role `lab`, nunca superuser)
-  → SSE notifica a posição na fila e o READY
-  → o primeiro POST /sandboxes/:id/heartbeat leva READY → ACTIVE; os seguintes renovam a ociosidade
-  → DELETE, ociosidade, READY não reivindicado ou fim do TTL → EXPIRING → DESTROYING → DESTROYED
+        container Postgres na rede própria do sandbox; o seed roda como superuser no init;
+        o container da API é anexado à rede do sandbox (SANDBOX_ATTACH_CONTAINERS)
+  → LabRunWatcher consulta o manager e publica no SSE da sessão: lab-queued, lab-ready, lab-ended
+  → no lab-ready, o navegador chama POST /labs/runs/current/claim → primeiro heartbeat (READY → ACTIVE)
+  → POST /labs/runs/current/app monta a consulta (buildSearch) e a executa no sandbox como o
+        role lab; POST …/execute roda o console do aluno (mesmo runScript do T0/T1)
+  → limite de tempo sem superuser: a API cancela o backend por uma conexão como o próprio role lab
+  → DELETE, sessão encerrada, ociosidade, READY não reivindicado ou fim do TTL →
+        EXPIRING → DESTROYING → DESTROYED
   → o loop de reconciliação converge qualquer divergência, mesmo com o banco de controle fora
 ```
 
 O sandbox-manager existe e é testado, inclusive com um teste de caos contra o Docker real. A
-integração com a API — a rota do lab e a fila por SSE — entra com o primeiro lab T2.
+integração está no ar com o mini-app de injection, o primeiro lab T2 (ADR 0010). A API entra
+nas redes internas dos sandboxes para alcançar os bancos T2; o isolamento continua, porque a
+rede não tem egress e o role `lab` não abre conexões de saída.
 
 ## Labs SECURE
 
@@ -122,16 +128,16 @@ navegador não envia ao servidor.
 
 ## Módulos da API (NestJS)
 
-| Módulo          | Responsabilidade                                                                |
-| --------------- | ------------------------------------------------------------------------------- |
-| `sessions`      | Ciclo de vida da sessão, tier, TTL, cookie anônimo                              |
-| `execution`     | Executar SQL, analisar consultas (EXPLAIN), relatório de segurança              |
-| `introspection` | Snapshot e diff (delegando a `packages/core`)                                   |
-| `events`        | Log append-only, projeções, SSE                                                 |
-| `scenarios`     | Carregar cenários de `packages/scenarios`, criar templates T1, validar desafios |
-| `analysis`      | Montar o contexto de análise e rodar as regras (dentro de `execution`)          |
-| `labs`          | Orquestrar labs T2, incluindo o WS de concorrência                              |
-| `auth`          | Contas (argon2id), projetos salvos, sessão anônima assumida no login (ADR 0008) |
+| Módulo          | Responsabilidade                                                                    |
+| --------------- | ----------------------------------------------------------------------------------- |
+| `sessions`      | Ciclo de vida da sessão, tier, TTL, cookie anônimo                                  |
+| `execution`     | Executar SQL, analisar consultas (EXPLAIN), relatório de segurança                  |
+| `introspection` | Snapshot e diff (delegando a `packages/core`)                                       |
+| `events`        | Log append-only, projeções, SSE                                                     |
+| `scenarios`     | Carregar cenários de `packages/scenarios`, criar templates T1, validar desafios     |
+| `analysis`      | Montar o contexto de análise e rodar as regras (dentro de `execution`)              |
+| `labs`          | Execuções de lab T2: pede sandbox ao manager, mini-app, console, watcher (ADR 0010) |
+| `auth`          | Contas (argon2id), projetos salvos, sessão anônima assumida no login (ADR 0008)     |
 
 Dependências entre módulos são explícitas via exports do Nest; nenhum módulo acessa o repositório de outro diretamente.
 

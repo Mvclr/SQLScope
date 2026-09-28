@@ -56,6 +56,10 @@ uma vez com o script de `infra/postgres-control/`, que é idempotente:
 docker compose exec postgres-control sh /docker-entrypoint-initdb.d/01-sandbox-manager.sh
 ```
 
+Sob `pnpm dev` a API roda no host e não alcança as redes internas dos sandboxes, então
+**iniciar um lab T2** (o de injection no servidor) só funciona com a API dentro do compose:
+`docker compose up --build`. O resto do app roda normalmente com `pnpm dev`.
+
 `pnpm dev` aplica as migrations do banco de controle antes de subir a API, então um clone
 novo já sobe pronto. Se o `postgres-control` não estiver de pé, o comando falha aí mesmo,
 com a mensagem do Prisma, em vez de a API subir e errar a cada varredura do reaper.

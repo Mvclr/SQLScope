@@ -46,8 +46,8 @@ Depois edite o arquivo. O mínimo a trocar:
 - **`SESSION_SECRET`** — obrigatório, e a API se recusa a subir em produção com o valor que
   vem do repositório. Gere com `openssl rand -base64 32`.
 - **`SANDBOX_MANAGER_TOKEN`** — obrigatório, gerado do mesmo jeito. Quem tem esse token cria
-  containers no host pelo sandbox-manager, que também recusa em produção o valor do
-  repositório.
+  containers no host pelo sandbox-manager; a API o apresenta ao manager para os labs T2
+  (ADR 0010). O manager e a API recusam em produção o valor do repositório.
 - **`CONTROL_DB_PASSWORD`**, **`SANDBOX_SUPERUSER_PASSWORD`**, **`SANDBOX_PROVISIONER_PASSWORD`**,
   **`SANDBOX_MANAGER_DB_PASSWORD`** e **`REDIS_PASSWORD`** — os defaults servem para rodar na sua máquina, não num host público.
 - **`SQLSCOPE_VERSION`** — deixe em `edge` para acompanhar a `main`, ou fixe uma tag.
