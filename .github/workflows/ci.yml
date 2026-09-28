@@ -58,7 +58,7 @@ jobs:
         run: curl --fail --silent --show-error http://localhost:4000/health/ready
       - name: Pages render
         run: |
-          for path in / /learn /learn/loja-online /build /import /monaco/vs/loader.js; do
+          for path in / /learn /learn/loja-online /build /import /secure /secure/sql-injection-app /monaco/vs/loader.js; do
             curl --fail --silent --show-error --output /dev/null "http://localhost:3000$path"
           done
       - name: A session runs SQL through the web proxy
@@ -123,6 +123,52 @@ jobs:
         run: |
           if docker compose exec -T api wget -qO- -T 3 http://docker-socket-proxy:2375/_ping; then
             echo "::error::api can reach docker-socket-proxy"
+            exit 1
+          fi
+      - name: A T2 injection lab runs end to end through the web proxy
+        run: |
+          node --input-type=module - <<'JS'
+          const base = 'http://localhost:3000/api';
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+          let cookie = '';
+          const call = async (method, path, body) => {
+            const res = await fetch(base + path, {
+              method,
+              headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+              body: body ? JSON.stringify(body) : undefined,
+            });
+            const set = res.headers.getSetCookie?.() ?? [];
+            if (set.length) cookie = set.map((c) => c.split(';')[0]).join('; ');
+            return { status: res.status, body: res.status === 204 ? null : await res.json().catch(() => null) };
+          };
+          await call('POST', '/sessions');
+          const started = await call('POST', '/labs/sql-injection-app/runs');
+          if (started.status !== 202) throw new Error(`start answered ${started.status}`);
+          let view;
+          for (let i = 0; i < 240; i++) {
+            view = await call('GET', '/labs/runs/current');
+            if (view.status === 404) throw new Error('run vanished');
+            if (['READY', 'ACTIVE'].includes(view.body.status)) break;
+            await sleep(500);
+          }
+          if (!['READY', 'ACTIVE'].includes(view.body?.status)) throw new Error(`not ready: ${JSON.stringify(view.body)}`);
+          if ((await call('POST', '/labs/runs/current/claim')).body.status !== 'ACTIVE') throw new Error('claim failed');
+          const tautology = await call('POST', '/labs/runs/current/app', { input: "' or '1'='1", mode: 'concatenated' });
+          if (!tautology.body.result.ok || tautology.body.result.rows.length !== 3) throw new Error(`tautology: ${JSON.stringify(tautology.body)}`);
+          const union = await call('POST', '/labs/runs/current/app', { input: "' union all select id, numero, validade from cartoes --", mode: 'concatenated' });
+          if (union.body.result.ok || union.body.result.error.code !== '42501') throw new Error(`union not blocked: ${JSON.stringify(union.body)}`);
+          const parameterized = await call('POST', '/labs/runs/current/app', { input: "' or '1'='1", mode: 'parameterized' });
+          if (!parameterized.body.result.ok || parameterized.body.result.rows.length !== 0) throw new Error(`parameterized: ${JSON.stringify(parameterized.body)}`);
+          if ((await call('DELETE', '/labs/runs/current')).status !== 204) throw new Error('release failed');
+          console.log('T2 injection lab ok');
+          JS
+          for i in $(seq 1 30); do
+            leftovers=$(docker ps --all --quiet --filter label=sqlscope.managed-by=sqlscope)
+            [ -z "$leftovers" ] && break
+            sleep 1
+          done
+          if [ -n "$leftovers" ]; then
+            echo "::error::a lab sandbox was left behind after release"
             exit 1
           fi
       - name: Logs on failure
