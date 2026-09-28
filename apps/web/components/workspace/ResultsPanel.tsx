@@ -4,7 +4,13 @@ import type { StatementResult } from '@sqlscope/engine';
 import { Check, CircleX, Globe, Server, Table2, TriangleAlert, X } from 'lucide-react';
 import { EmptyState, Kbd } from '../ui/EmptyState';
 import { useWorkspace } from './context';
+import { T0_EXTENSIONS } from './pglite-backend';
 import { ResultGrid } from './ResultGrid';
+
+/** SQLSTATE for "extension is not available" — what a missing contrib module reports. */
+const EXTENSION_NOT_AVAILABLE = '0A000';
+
+const extensionsHint = `No navegador (T0), apenas estas extensões estão disponíveis: ${T0_EXTENSIONS.join(', ')}.`;
 
 function summary(statement: StatementResult): string {
   if (statement.status === 'error') return `Erro ${statement.error.code}`;
@@ -115,19 +121,28 @@ export function ResultsPanel() {
           </p>
         )}
         <div className="min-h-0 flex-1">
-          {statement && <StatementDetail statement={statement} />}
+          {statement && <StatementDetail statement={statement} tier={tier} />}
         </div>
       </div>
     </div>
   );
 }
 
-function StatementDetail({ statement }: { statement: StatementResult }) {
+function StatementDetail({
+  statement,
+  tier,
+}: {
+  statement: StatementResult;
+  tier: 'T0' | 'T1';
+}) {
   if (statement.status === 'error') {
     const { message, code, detail, hint } = statement.error;
+    const hints = [hint, code === EXTENSION_NOT_AVAILABLE && tier === 'T0' ? extensionsHint : null]
+      .filter((h): h is string => h !== null)
+      .join(' ');
     return (
       <div className="p-4">
-        <ErrorCard title={`${code} · ${message}`} message={detail} hint={hint} />
+        <ErrorCard title={`${code} · ${message}`} message={detail} hint={hints || null} />
       </div>
     );
   }

@@ -4,6 +4,13 @@ import { pgliteSession } from '@sqlscope/core/pglite';
 import type { Measurement } from '@sqlscope/engine';
 import { BackendError, type WorkspaceBackend } from './backend';
 
+/**
+ * Extensions bundled with PGlite as separate WASM modules (ADR 0001: T0 has no server to
+ * install more on). Each is registered by name below; anything else stays unavailable and
+ * `CREATE EXTENSION` reports it, same as a real server missing a package.
+ */
+export const T0_EXTENSIONS = ['uuid-ossp', 'pgcrypto', 'pg_trgm', 'hstore', 'citext'] as const;
+
 /** Generous: in T0 the only machine at risk is the user's own. */
 const limits = { maxRows: 5_000, maxBytes: 5_000_000 };
 
@@ -17,8 +24,16 @@ export interface DatabaseSetup {
 
 /** Loaded on demand: PGlite is several megabytes of WebAssembly. */
 export async function createPGlite(): Promise<PGliteInterface> {
-  const { PGlite } = await import('@electric-sql/pglite');
-  return PGlite.create();
+  const [{ PGlite }, { uuid_ossp }, { pgcrypto }, { pg_trgm }, { hstore }, { citext }] =
+    await Promise.all([
+      import('@electric-sql/pglite'),
+      import('@electric-sql/pglite/contrib/uuid_ossp'),
+      import('@electric-sql/pglite/contrib/pgcrypto'),
+      import('@electric-sql/pglite/contrib/pg_trgm'),
+      import('@electric-sql/pglite/contrib/hstore'),
+      import('@electric-sql/pglite/contrib/citext'),
+    ]);
+  return PGlite.create({ extensions: { uuid_ossp, pgcrypto, pg_trgm, hstore, citext } });
 }
 
 /** T0: PostgreSQL compiled to WebAssembly, running in this tab (ADR 0001). */
