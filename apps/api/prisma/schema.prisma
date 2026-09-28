@@ -18,6 +18,15 @@ enum SessionStatus {
   FAILED
 }
 
+/// The live statuses the API mirrors from the sandbox manager (ADR 0002). A run that ends,
+/// for any reason, leaves no row: the manager keeps the sandbox's history, not the API.
+enum LabRunStatus {
+  PENDING
+  PROVISIONING
+  READY
+  ACTIVE
+}
+
 /// Someone who signed up, so their work survives the sandbox.
 model User {
   id           String    @id @default(uuid()) @db.Uuid
@@ -64,11 +73,33 @@ model Session {
   userId       String?       @map("user_id") @db.Uuid
   user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   events       SessionEvent[]
+  labRun       LabRun?
 
   @@index([status, lastActiveAt])
   @@index([clientHash, status])
   @@index([userId])
   @@map("sessions")
+}
+
+/// A live T2 lab in a sandbox the manager owns (ADR 0010). The API keeps only the binding
+/// while the run lasts: the manager is the source of truth for the sandbox, the lab role's
+/// password never lands here (it is read from the manager and held in memory), and a run
+/// that ends leaves no row. One row per session enforces one live run per session.
+model LabRun {
+  id        String       @id @default(uuid()) @db.Uuid
+  sessionId String       @unique @map("session_id") @db.Uuid
+  /// Which lab (from @sqlscope/labs) is running.
+  labId     String       @map("lab_id")
+  /// The manager's sandbox id (`t2_…`); null only between insert and the accepted request.
+  sandboxId String?      @map("sandbox_id")
+  /// Last status seen from the manager, narrowed to what the API acts on.
+  status    LabRunStatus @default(PENDING)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  session   Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([status, updatedAt])
+  @@map("lab_runs")
 }
 
 /// Append-only history of a session (ADR 0004). `seq` orders events within a session.

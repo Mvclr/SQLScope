@@ -6,6 +6,7 @@ const valid = {
   SANDBOX_DATABASE_URL: 'postgres://u:p@localhost:5433/postgres',
   REDIS_URL: 'redis://localhost:6379',
   SESSION_SECRET: 'x'.repeat(32),
+  SANDBOX_MANAGER_TOKEN: 'y'.repeat(32),
 };
 
 describe('loadConfig', () => {
@@ -36,6 +37,16 @@ describe('loadConfig', () => {
     );
     // The same secret is fine outside production, where the stack is not exposed.
     expect(loadConfig({ ...valid, SESSION_SECRET: secret }).SESSION_SECRET).toBe(secret);
+  });
+
+  it('refuses a known manager token in production only', () => {
+    const token = 'dev-only-sandbox-manager-token-change-me';
+    expect(() =>
+      loadConfig({ ...valid, NODE_ENV: 'production', SANDBOX_MANAGER_TOKEN: token }),
+    ).toThrow(/SANDBOX_MANAGER_TOKEN/);
+    expect(loadConfig({ ...valid, SANDBOX_MANAGER_TOKEN: token }).SANDBOX_MANAGER_TOKEN).toBe(
+      token,
+    );
   });
 
   it('rejects malformed URLs', () => {

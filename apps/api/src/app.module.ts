@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { ExecutionModule } from './execution/execution.module.js';
 import { HealthModule } from './health/health.module.js';
 import { InfrastructureModule } from './infrastructure/infrastructure.module.js';
+import { LabsModule } from './labs/labs.module.js';
 import { SessionsModule } from './sessions/sessions.module.js';
 
 @Module({})
@@ -34,6 +35,7 @@ export class AppModule {
         AuthModule,
         SessionsModule,
         ExecutionModule,
+        LabsModule,
       ],
       providers: [{ provide: CONFIG, useValue: config }],
       exports: [CONFIG],

@@ -9,7 +9,11 @@ export type SessionNotice =
       readonly changes: readonly SchemaChange[];
     }
   | { readonly type: 'session-expiring'; readonly secondsLeft: number }
-  | { readonly type: 'session-ended'; readonly reason: string };
+  | { readonly type: 'session-ended'; readonly reason: string }
+  // T2 lab runs (ADR 0010): the browser starts a lab and waits on these for the sandbox.
+  | { readonly type: 'lab-queued'; readonly position: number }
+  | { readonly type: 'lab-ready' }
+  | { readonly type: 'lab-ended'; readonly reason: string };
 
 /**
  * In-process fan-out of session notices. One API process holds every session's pinned

@@ -64,6 +64,7 @@ export function configFor(stack: Stack, overrides: Partial<Record<string, string
     NODE_ENV: 'test',
     LOG_LEVEL: 'fatal',
     SESSION_SECRET: 'test-secret-that-is-at-least-32-chars',
+    SANDBOX_MANAGER_TOKEN: 'test-manager-token-that-is-32-chars-min',
     CONTROL_DATABASE_URL: stack.control.getConnectionUri(),
     SANDBOX_DATABASE_URL: sandboxUrl.toString(),
     REDIS_URL: stack.redis.getConnectionUrl(),

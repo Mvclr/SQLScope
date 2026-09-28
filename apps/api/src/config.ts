@@ -12,6 +12,16 @@ const KNOWN_SECRETS = new Set([
   'replace-with-at-least-32-random-characters',
 ]);
 
+/**
+ * Tokens that ship in the repository so the local stack boots. Whoever holds the token can
+ * ask the sandbox manager to start containers on the host, so a production process refuses
+ * to run with one — the same rule as SESSION_SECRET.
+ */
+const KNOWN_MANAGER_TOKENS = new Set([
+  'dev-only-sandbox-manager-token-change-me',
+  'replace-with-at-least-32-random-characters',
+]);
+
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -33,6 +43,13 @@ const schema = z.object({
   /** T1 cluster, as the non-superuser provisioner role (ADR 0001). */
   SANDBOX_DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
+
+  /** The internal sandbox manager that owns the T2 containers (ADR 0002, 0010). */
+  SANDBOX_MANAGER_URL: z.url().default('http://sandbox-manager:4100'),
+  /** Bearer token the API presents to the manager; must match the manager's own. */
+  SANDBOX_MANAGER_TOKEN: z.string().min(32),
+  /** Live T2 lab runs one browser client may hold at once. */
+  LAB_RUNS_PER_CLIENT: z.coerce.number().int().positive().default(1),
 
   /** A session unused for this long is destroyed. */
   SESSION_IDLE_MINUTES: minutes(20),
@@ -59,6 +76,17 @@ const validated = schema
         code: 'custom',
         path: ['SESSION_SECRET'],
         message: 'SESSION_SECRET is a known default; set a unique random value in production.',
+      });
+    }
+    if (
+      config.NODE_ENV === 'production' &&
+      KNOWN_MANAGER_TOKENS.has(config.SANDBOX_MANAGER_TOKEN)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SANDBOX_MANAGER_TOKEN'],
+        message:
+          'SANDBOX_MANAGER_TOKEN is a known default; set a unique random value in production.',
       });
     }
   })

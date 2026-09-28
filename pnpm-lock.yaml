@@ -68,6 +68,9 @@ importers:
       '@sqlscope/explain':
         specifier: workspace:*
         version: link:../../packages/explain
+      '@sqlscope/labs':
+        specifier: workspace:*
+        version: link:../../packages/labs
       '@sqlscope/security-rules':
         specifier: workspace:*
         version: link:../../packages/security-rules
