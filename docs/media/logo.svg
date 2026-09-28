@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="96" height="96" role="img" aria-label="SQLScope">
+  <circle cx="24" cy="24" r="21" fill="none" stroke="#06b6d4" stroke-width="3.5"/>
+  <path d="M5 24h9l4-10 6 20 5-14 3 4h11" fill="none" stroke="#06b6d4" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

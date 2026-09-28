@@ -24,7 +24,7 @@ Substitui a seção 36 do [conceito](concept.md). Princípios: isolamento desde 
 - Histórico da sessão (log de eventos).
 - Rate limit e quota por IP.
 - Deploy público em VPS. **Pendente**: depende de um servidor.
-- README com GIF do canvas animado. **Pendente**: gravar a partir do deploy.
+- README com demonstração em vídeo e prévia animada — feito, gravado do app local; regravar a partir do deploy fica opcional.
 
 **Pronto quando:** um visitante anônimo abre o site, aperta Run, e vê a tabela nascer — em T0 e em T1.
 
