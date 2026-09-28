@@ -65,7 +65,8 @@ drop table tarefas;`,
       brief: 'O mesmo vale para mudar a tabela, não os dados dentro dela.',
       sql: `set role editor;
 alter table tarefas rename to lista_tarefas;`,
-      expect: 'must be owner of table tarefas de novo — renomear é alterar a estrutura, não os dados.',
+      expect:
+        'must be owner of table tarefas de novo — renomear é alterar a estrutura, não os dados.',
       refused: '42501',
       concept: {
         text: 'ALTER TABLE, para qualquer mudança na definição da tabela (colunas, nome, restrições), também exige ser o dono — os privilégios de SELECT/INSERT/UPDATE/DELETE não alcançam a estrutura.',
@@ -87,7 +88,8 @@ alter table tarefas owner to editor;`,
     {
       id: 'agora-pode',
       title: 'Agora sim',
-      brief: 'Como dono, editor pode alterar a estrutura — algo que nenhum GRANT anterior permitia.',
+      brief:
+        'Como dono, editor pode alterar a estrutura — algo que nenhum GRANT anterior permitia.',
       sql: `set role editor;
 alter table tarefas add column if not exists validada boolean not null default false;
 select id, titulo from tarefas order by id;`,

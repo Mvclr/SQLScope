@@ -128,13 +128,7 @@ export function ResultsPanel() {
   );
 }
 
-function StatementDetail({
-  statement,
-  tier,
-}: {
-  statement: StatementResult;
-  tier: 'T0' | 'T1';
-}) {
+function StatementDetail({ statement, tier }: { statement: StatementResult; tier: 'T0' | 'T1' }) {
   if (statement.status === 'error') {
     const { message, code, detail, hint } = statement.error;
     const hints = [hint, code === EXTENSION_NOT_AVAILABLE && tier === 'T0' ? extensionsHint : null]

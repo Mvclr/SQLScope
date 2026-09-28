@@ -34,7 +34,8 @@ export const comentariosSql: Lab = {
       brief:
         'Um e-mail comum, de uma conta ativa. A árvore tem duas comparações unidas por AND: o texto digitado é só um valor.',
       sql: "select id, nome, email from usuarios where email = 'ana@exemplo.com' and ativo = true;",
-      expect: 'Uma linha. Guarde esta árvore: é o formato "correto" com que as outras serão comparadas.',
+      expect:
+        'Uma linha. Guarde esta árvore: é o formato "correto" com que as outras serão comparadas.',
       rows: 1,
       concept: {
         text: 'Uma constante de texto entre aspas simples é um valor literal; comparada com = numa cláusula WHERE, ela nunca altera a estrutura da consulta, só o que é filtrado.',

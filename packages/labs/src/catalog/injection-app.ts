@@ -78,7 +78,7 @@ export const sqlInjectionApp: Lab = {
         'Todos os usuários, inclusive o e-mail do admin — de uma busca que devia achar um só. O app leu a tabela toda porque a injeção ampliou o WHERE.',
       rows: 3,
       concept: {
-        text: 'OR combina duas condições booleanas: o resultado é verdadeiro se qualquer uma delas for verdadeira. Uma condição sempre verdadeira, como \'1\'=\'1\', faz o OR inteiro ser sempre verdadeiro.',
+        text: "OR combina duas condições booleanas: o resultado é verdadeiro se qualquer uma delas for verdadeira. Uma condição sempre verdadeira, como '1'='1', faz o OR inteiro ser sempre verdadeiro.",
         url: 'https://www.postgresql.org/docs/current/functions-logical.html',
       },
     },

@@ -64,7 +64,7 @@ export const sqlInjection: Lab = {
         'Todas as linhas. Na árvore, o filtro deixou de ser uma comparação e virou um OR — um nó que a aplicação nunca escreveu.',
       rows: 3,
       concept: {
-        text: 'OR combina duas condições booleanas: o resultado é verdadeiro se qualquer uma delas for verdadeira. Uma condição sempre verdadeira, como \'1\'=\'1\', faz o OR inteiro ser sempre verdadeiro — é o que se chama de tautologia.',
+        text: "OR combina duas condições booleanas: o resultado é verdadeiro se qualquer uma delas for verdadeira. Uma condição sempre verdadeira, como '1'='1', faz o OR inteiro ser sempre verdadeiro — é o que se chama de tautologia.",
         url: 'https://www.postgresql.org/docs/current/functions-logical.html',
       },
     },
