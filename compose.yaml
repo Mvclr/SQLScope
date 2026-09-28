@@ -32,6 +32,11 @@ services:
       CONTROL_DATABASE_URL: postgres://sqlscope:${CONTROL_DB_PASSWORD:-sqlscope}@postgres-control:5432/sqlscope
       SANDBOX_DATABASE_URL: postgres://sqlscope_provisioner:${SANDBOX_PROVISIONER_PASSWORD:-sandbox-provisioner}@postgres-sandbox:5432/postgres
       REDIS_URL: redis://:${REDIS_PASSWORD:-sqlscope}@redis:6379
+      # The T2 labs (ADR 0010). The API drives the manager over "control"; the manager joins
+      # the API to each sandbox's own network, so no depends_on is needed and the API stays
+      # ready even when the manager is down.
+      SANDBOX_MANAGER_URL: http://sandbox-manager:4100
+      SANDBOX_MANAGER_TOKEN: ${SANDBOX_MANAGER_TOKEN:?defina um SANDBOX_MANAGER_TOKEN forte no .env — veja .env.example}
     networks: [public, control, sandbox]
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -104,8 +109,10 @@ services:
       STATE_DATABASE_URL: postgres://sqlscope_sandbox_manager:${SANDBOX_MANAGER_DB_PASSWORD:-sandbox-manager}@postgres-control:5432/sqlscope_sandboxes
       DOCKER_HOST: http://docker-socket-proxy:2375
       MANAGER_INSTANCE: sqlscope
-      # Empty until the API uses T2; then the API container joins every sandbox network.
-      SANDBOX_ATTACH_CONTAINERS: ''
+      # The API joins every sandbox network, so it can reach the T2 databases (ADR 0010).
+      # The name is stable because this compose fixes `name: sqlscope`; override it when the
+      # project name differs (a smoke stack, say).
+      SANDBOX_ATTACH_CONTAINERS: ${SANDBOX_ATTACH_CONTAINERS:-sqlscope-api-1}
     networks: [control, docker-api]
     depends_on:
       postgres-control: { condition: service_healthy }
